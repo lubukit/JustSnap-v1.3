@@ -53,6 +53,12 @@
       overflow-x: hidden;
     }
 
+    body:has(.app.home-mode) {
+      height: 100svh;
+      overflow: hidden;
+      touch-action: pan-x;
+    }
+
     button,
     input {
       font: inherit;
@@ -101,6 +107,10 @@
       transform: scaleX(-1);
     }
 
+    .camera-feed.active {
+      z-index: 1;
+    }
+
     .camera-feed.environment {
       transform: none;
     }
@@ -126,6 +136,13 @@
 
     .viewfinder.camera-error .camera-fallback {
       opacity: 1;
+    }
+
+    .viewfinder.camera-loading .camera-fallback {
+      opacity: 1;
+      background:
+        radial-gradient(circle at 50% 35%, rgba(255, 255, 255, .08), transparent 31%),
+        linear-gradient(135deg, #171b20, #050607 68%);
     }
 
     .detection-layer {
@@ -481,9 +498,15 @@
     .app.manage-mode,
     .app.checklist-mode,
     .app.history-mode,
-    .app.home-mode,
     .app.about-mode {
       overflow-y: auto;
+    }
+
+    .app.home-mode {
+      height: 100svh;
+      min-height: 100svh;
+      max-height: 100svh;
+      overflow: hidden;
     }
 
     .home-screen,
@@ -497,12 +520,17 @@
     }
 
     .home-screen {
-      padding: 0 0 120px;
-      background: #f5f5f5;
+      width: 100%;
+      height: 100svh;
+      overflow: hidden;
+      padding: 0 0 calc(110px + env(safe-area-inset-bottom));
+      background: #fff;
+      overscroll-behavior: none;
     }
 
     .app.home-mode .home-screen {
-      display: block;
+      display: grid;
+      grid-template-rows: 48svh minmax(0, 1fr);
     }
 
     .app.manage-mode .manage-screen {
@@ -510,11 +538,15 @@
     }
 
     .home-hero {
-      min-height: 44svh;
-      padding: max(42px, env(safe-area-inset-top)) 34px 36px;
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      min-height: 0;
+      padding: max(34px, env(safe-area-inset-top)) 34px 22px;
       border-radius: 0 0 34px 34px;
       background: #08af3f url("images/home-bg.jpg") center / cover no-repeat;
       color: #fff;
+      overflow: hidden;
     }
 
     .home-topbar {
@@ -538,34 +570,41 @@
 
     .home-title {
       max-width: 360px;
-      margin: 50px 0 52px;
+      margin: min(5svh, 40px) 0 min(4svh, 34px);
       color: #fff;
       font-family: "AG Book Rounded Bold", Inter, ui-sans-serif, system-ui, sans-serif;
-      font-size: clamp(50px, 15vw, 74px);
+      font-size: clamp(44px, 13vw, 70px);
       font-weight: 950;
       line-height: .92;
       letter-spacing: 0;
     }
 
     .home-start {
+      display: block;
       width: 100%;
-      min-height: 58px;
+      max-width: 100%;
+      flex: 0 0 auto;
+      height: 56px;
       border: 0;
       border-radius: 999px;
       background: #fff;
       color: rgba(0, 150, 49, .62);
       font-size: 28px;
       font-weight: 900;
+      white-space: nowrap;
+      overflow: hidden;
       cursor: pointer;
     }
 
     .sponsored-area {
-      padding: 70px 0 18px;
-      background: #f5f5f5;
+      overflow: hidden;
+      min-height: 0;
+      padding: 34px 0 8px;
+      background: #fff;
     }
 
     .sponsored-title {
-      margin: 0 36px 18px;
+      margin: 0 36px 12px;
       color: #8b8b90;
       font-size: 20px;
       font-weight: 650;
@@ -574,10 +613,10 @@
     .ad-rail {
       display: grid;
       grid-auto-flow: column;
-      grid-auto-columns: minmax(280px, 78%);
+      grid-auto-columns: minmax(240px, 76%);
       gap: 12px;
       overflow-x: auto;
-      padding: 0 36px 18px;
+      padding: 0 36px 12px;
       scroll-snap-type: x mandatory;
       scrollbar-width: none;
     }
@@ -587,7 +626,7 @@
     }
 
     .ad-card {
-      height: 215px;
+      height: min(22svh, 178px);
       overflow: hidden;
       border-radius: 8px;
       background: #fff;
@@ -608,6 +647,7 @@
       font-size: 19px;
       font-weight: 600;
       text-align: center;
+      white-space: nowrap;
     }
 
     .app.checklist-mode .checklist-screen {
@@ -1047,7 +1087,7 @@
     .checklist-content {
       display: grid;
       gap: 22px;
-      padding: 14px 22px 118px;
+      padding: 14px 22px 22px;
     }
 
     .checklist-group {
@@ -1121,13 +1161,19 @@
     }
 
     .checkout-footer {
-      position: fixed;
-      left: 50%;
-      bottom: calc(118px + 92px + max(17px, env(safe-area-inset-bottom)));
-      z-index: 7;
-      width: min(calc(100vw - 44px), 386px);
+      display: none;
+      width: 100%;
+      margin: 2px 0 0;
       text-align: center;
-      transform: translateX(-50%);
+    }
+
+    .checkout-footer.visible {
+      display: block;
+    }
+
+    .checklist-screen .checkout-footer {
+      margin: 0 22px 132px;
+      width: calc(100% - 44px);
     }
 
     .confirm-checkout {
@@ -1436,6 +1482,12 @@
         border-radius: 44px;
       }
 
+      .app.home-mode {
+        min-height: 100svh;
+        margin: 0;
+        border-radius: 0;
+      }
+
       .bottom-nav,
       .brand {
         position: absolute;
@@ -1554,7 +1606,7 @@
       </header>
 
       <div class="checklist-content" id="checklistContent"></div>
-      <div class="checkout-footer">
+      <div class="checkout-footer" id="checkoutFooter">
         <button class="confirm-checkout" id="confirmCheckout" type="button">Confirm Checkout</button>
         <p class="checkout-warning">If you Checkout all checklist will be deleted.</p>
       </div>
@@ -1818,6 +1870,7 @@
     const aboutDots = document.getElementById("aboutDots");
     const aboutNext = document.getElementById("aboutNext");
     const aboutSkip = document.getElementById("aboutSkip");
+    const checkoutFooter = document.getElementById("checkoutFooter");
     const confirmCheckoutButton = document.getElementById("confirmCheckout");
     const checkoutWarningSheet = document.getElementById("checkoutWarningSheet");
     const checkoutWarningText = document.getElementById("checkoutWarningText");
@@ -2415,6 +2468,7 @@
         .filter(group => group.items.length);
 
       if (!bagsWithItems.length) {
+        checkoutFooter.classList.remove("visible");
         checklistContent.innerHTML = `
           <section class="checklist-group">
             <h2 class="checklist-title">Checklist</h2>
@@ -2426,7 +2480,8 @@
         return;
       }
 
-      checklistContent.innerHTML = bagsWithItems.map(group => `
+      checkoutFooter.classList.add("visible");
+      checklistContent.innerHTML = `${bagsWithItems.map(group => `
         <section class="checklist-group">
           <h2 class="checklist-title">${escapeHtml(displayBagName(group.bag))}</h2>
           <ul class="checklist-list">
@@ -2447,7 +2502,7 @@
             `).join("")}
           </ul>
         </section>
-      `).join("");
+      `).join("")}`;
     }
 
     function updateChecklistProgress() {
@@ -3103,10 +3158,16 @@
     }
 
     async function attachCameraStream(stream, useEnvironmentCamera) {
+      if (cameraFeed.srcObject && cameraFeed.srcObject !== stream) {
+        cameraFeed.srcObject.getTracks?.().forEach(track => track.stop());
+      }
       cameraFeed.srcObject = stream;
       cameraStarted = true;
       cameraFeed.classList.toggle("environment", useEnvironmentCamera);
+      cameraFeed.classList.remove("active");
       viewfinder.classList.remove("camera-error");
+      viewfinder.classList.add("camera-loading");
+      cameraFallback.textContent = "Membuka kamera...";
 
       try {
         await cameraFeed.play();
@@ -3114,11 +3175,76 @@
         // Some browsers start playback after metadata; detector prep below will still retry.
       }
 
+      window.setTimeout(() => {
+        if (cameraFeed.readyState >= 2 && cameraFeed.videoWidth && cameraFeed.videoHeight) {
+          cameraFeed.classList.add("active");
+          viewfinder.classList.remove("camera-loading");
+        } else {
+          viewfinder.classList.add("camera-error");
+          viewfinder.classList.remove("camera-loading");
+          cameraFallback.textContent = "Kamera belum keluar. Tutup app dan buka semula, atau benarkan kamera di browser.";
+        }
+      }, 1800);
+
       prepareAiDetector();
+    }
+
+    async function requestCameraStream() {
+      const attempts = [
+        {
+          useEnvironmentCamera: true,
+          constraints: {
+            audio: false,
+            video: {
+              facingMode: { exact: "environment" },
+              width: { ideal: 1280 },
+              height: { ideal: 1920 }
+            }
+          }
+        },
+        {
+          useEnvironmentCamera: true,
+          constraints: {
+            audio: false,
+            video: {
+              facingMode: "environment",
+              width: { ideal: 960 },
+              height: { ideal: 1280 }
+            }
+          }
+        },
+        {
+          useEnvironmentCamera: false,
+          constraints: {
+            audio: false,
+            video: {
+              width: { ideal: 960 },
+              height: { ideal: 1280 }
+            }
+          }
+        }
+      ];
+
+      let lastError = null;
+      for (const attempt of attempts) {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia(attempt.constraints);
+          return { stream, useEnvironmentCamera: attempt.useEnvironmentCamera };
+        } catch (error) {
+          lastError = error;
+        }
+      }
+
+      throw lastError;
     }
 
     async function startCamera() {
       if (cameraStarted) {
+        viewfinder.classList.remove("camera-error");
+        if (cameraFeed.readyState >= 2) {
+          cameraFeed.classList.add("active");
+          viewfinder.classList.remove("camera-loading");
+        }
         prepareAiDetector();
         return;
       }
@@ -3136,27 +3262,17 @@
       }
 
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          audio: false,
-          video: {
-            facingMode: { ideal: "environment" },
-            width: { ideal: 1280 },
-            height: { ideal: 1920 }
-          }
-        });
-        await attachCameraStream(stream, true);
+        viewfinder.classList.add("camera-loading");
+        cameraFallback.textContent = "Minta akses kamera...";
+        const result = await requestCameraStream();
+        await attachCameraStream(result.stream, result.useEnvironmentCamera);
       } catch (error) {
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({
-            audio: false,
-            video: true
-          });
-          await attachCameraStream(stream, false);
-        } catch (fallbackError) {
-          cameraStarted = false;
-          viewfinder.classList.add("camera-error");
-          cameraFallback.textContent = "Benarkan akses kamera untuk scan item";
-        }
+        cameraStarted = false;
+        viewfinder.classList.add("camera-error");
+        viewfinder.classList.remove("camera-loading");
+        cameraFallback.textContent = error?.name === "NotAllowedError"
+          ? "Benarkan akses kamera untuk scan item"
+          : "Kamera tidak dapat dibuka di browser ini";
       }
     }
 

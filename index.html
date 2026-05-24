@@ -4,8 +4,12 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#02a83b">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="JustSnap">
   <meta name="application-name" content="JustSnap">
+  <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" type="image/png" href="images/app-logo.png">
   <link rel="apple-touch-icon" href="images/app-logo.png">
   <title>JustSnap</title>
@@ -614,7 +618,7 @@
       display: none;
       min-height: 100svh;
       overflow: hidden;
-      padding: max(38px, env(safe-area-inset-top)) 26px max(22px, env(safe-area-inset-bottom));
+      padding: max(30px, env(safe-area-inset-top)) 26px 164px;
       background: #06ad3d center / cover no-repeat;
       color: #fff;
     }
@@ -714,9 +718,15 @@
     }
 
     .about-actions {
+      position: fixed;
+      left: 50%;
+      bottom: max(18px, env(safe-area-inset-bottom));
+      z-index: 12;
       display: grid;
       gap: 12px;
+      width: min(calc(100vw - 52px), 378px);
       text-align: center;
+      transform: translateX(-50%);
     }
 
     .about-dots {
@@ -1387,6 +1397,12 @@
         position: absolute;
       }
 
+      .app.manage-mode .bottom-nav,
+      .app.manage-mode > .brand,
+      .app.checklist-mode .bottom-nav,
+      .app.checklist-mode > .brand,
+      .app.history-mode .bottom-nav,
+      .app.history-mode > .brand,
       .app.home-mode .bottom-nav,
       .app.home-mode > .brand {
         position: fixed;

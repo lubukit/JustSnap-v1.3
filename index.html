@@ -3157,10 +3157,64 @@
       cameraFeed.addEventListener("loadedmetadata", loadAiDetector, { once: true });
     }
 
+    function markCameraReady() {
+      if (cameraFeed.videoWidth && cameraFeed.videoHeight) {
+        cameraFeed.classList.add("active");
+        viewfinder.classList.remove("camera-loading");
+        viewfinder.classList.remove("camera-error");
+        prepareAiDetector();
+      }
+    }
+
+    function waitForCameraFrame(timeout = 8500) {
+      return new Promise((resolve, reject) => {
+        let settled = false;
+        const events = ["loadedmetadata", "loadeddata", "canplay", "playing"];
+        const cleanup = () => {
+          events.forEach(name => cameraFeed.removeEventListener(name, onReady));
+          window.clearTimeout(timer);
+          window.clearInterval(poll);
+        };
+        const finish = () => {
+          if (settled) return;
+          settled = true;
+          cleanup();
+          markCameraReady();
+          resolve();
+        };
+        const onReady = () => {
+          if (cameraFeed.readyState >= 2 || (cameraFeed.videoWidth && cameraFeed.videoHeight)) {
+            finish();
+          }
+        };
+        events.forEach(name => cameraFeed.addEventListener(name, onReady));
+        const poll = window.setInterval(onReady, 250);
+        const timer = window.setTimeout(() => {
+          if (settled) return;
+          settled = true;
+          cleanup();
+          reject(new Error("camera-frame-timeout"));
+        }, timeout);
+        onReady();
+      });
+    }
+
+    function withTimeout(promise, timeout = 4500) {
+      return Promise.race([
+        promise,
+        new Promise((_, reject) => window.setTimeout(() => reject(new Error("camera-request-timeout")), timeout))
+      ]);
+    }
+
     async function attachCameraStream(stream, useEnvironmentCamera) {
       if (cameraFeed.srcObject && cameraFeed.srcObject !== stream) {
         cameraFeed.srcObject.getTracks?.().forEach(track => track.stop());
       }
+      cameraFeed.muted = true;
+      cameraFeed.autoplay = true;
+      cameraFeed.playsInline = true;
+      cameraFeed.setAttribute("playsinline", "");
+      cameraFeed.setAttribute("webkit-playsinline", "");
       cameraFeed.srcObject = stream;
       cameraStarted = true;
       cameraFeed.classList.toggle("environment", useEnvironmentCamera);
@@ -3175,28 +3229,17 @@
         // Some browsers start playback after metadata; detector prep below will still retry.
       }
 
-      window.setTimeout(() => {
-        if (cameraFeed.readyState >= 2 && cameraFeed.videoWidth && cameraFeed.videoHeight) {
-          cameraFeed.classList.add("active");
-          viewfinder.classList.remove("camera-loading");
-        } else {
-          viewfinder.classList.add("camera-error");
-          viewfinder.classList.remove("camera-loading");
-          cameraFallback.textContent = "Kamera belum keluar. Tutup app dan buka semula, atau benarkan kamera di browser.";
-        }
-      }, 1800);
-
-      prepareAiDetector();
+      await waitForCameraFrame();
     }
 
-    async function requestCameraStream() {
-      const attempts = [
+    function getCameraAttempts() {
+      return [
         {
           useEnvironmentCamera: true,
           constraints: {
             audio: false,
             video: {
-              facingMode: { exact: "environment" },
+              facingMode: { ideal: "environment" },
               width: { ideal: 1280 },
               height: { ideal: 1920 }
             }
@@ -3224,14 +3267,40 @@
           }
         }
       ];
+    }
 
+    async function requestCameraStream() {
       let lastError = null;
-      for (const attempt of attempts) {
+      for (const attempt of getCameraAttempts()) {
         try {
-          const stream = await navigator.mediaDevices.getUserMedia(attempt.constraints);
+          const stream = await withTimeout(navigator.mediaDevices.getUserMedia(attempt.constraints));
           return { stream, useEnvironmentCamera: attempt.useEnvironmentCamera };
         } catch (error) {
           lastError = error;
+        }
+      }
+
+      throw lastError;
+    }
+
+    async function openFirstWorkingCamera() {
+      let lastError = null;
+      const attempts = [
+        ...getCameraAttempts()
+      ];
+
+      for (const attempt of attempts) {
+        try {
+          const stream = await withTimeout(navigator.mediaDevices.getUserMedia(attempt.constraints));
+          await attachCameraStream(stream, attempt.useEnvironmentCamera);
+          return;
+        } catch (error) {
+          lastError = error;
+          if (cameraFeed.srcObject) {
+            cameraFeed.srcObject.getTracks?.().forEach(track => track.stop());
+            cameraFeed.srcObject = null;
+          }
+          cameraStarted = false;
         }
       }
 
@@ -3264,8 +3333,7 @@
       try {
         viewfinder.classList.add("camera-loading");
         cameraFallback.textContent = "Minta akses kamera...";
-        const result = await requestCameraStream();
-        await attachCameraStream(result.stream, result.useEnvironmentCamera);
+        await openFirstWorkingCamera();
       } catch (error) {
         cameraStarted = false;
         viewfinder.classList.add("camera-error");

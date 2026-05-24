@@ -366,6 +366,11 @@
       display: block;
     }
 
+    .app.about-mode ~ .reminder-banner,
+    .app.about-mode ~ .reminder-banner.visible {
+      display: none;
+    }
+
     .reminder-message {
       margin: 0 0 12px;
       color: var(--ink);
@@ -614,13 +619,18 @@
     }
 
     .about-screen {
-      position: relative;
+      position: fixed;
+      inset: 0;
+      z-index: 30;
       display: none;
-      min-height: 100svh;
+      width: 100vw;
+      height: 100svh;
       overflow: hidden;
-      padding: max(30px, env(safe-area-inset-top)) 26px 164px;
+      padding: max(42px, env(safe-area-inset-top)) 26px 148px;
       background: #06ad3d center / cover no-repeat;
       color: #fff;
+      overscroll-behavior: none;
+      touch-action: manipulation;
     }
 
     .app.about-mode .about-screen {
@@ -641,15 +651,17 @@
       position: relative;
       display: grid;
       align-content: start;
+      width: min(100%, 430px);
+      margin: 0 auto;
       min-height: 0;
-      padding-top: 72px;
+      padding-top: 42px;
     }
 
     .about-title {
       margin: 0;
       color: #fff;
       font-family: "AG Book Rounded Bold", Inter, ui-sans-serif, system-ui, sans-serif;
-      font-size: clamp(46px, 16vw, 72px);
+      font-size: clamp(46px, 14vw, 74px);
       font-weight: 950;
       line-height: .92;
       letter-spacing: 0;
@@ -680,8 +692,10 @@
     .about-panel {
       display: none;
       align-self: end;
-      margin: 0 -26px 28px;
-      padding: 70px 18px 26px;
+      margin: 20px -26px 0;
+      max-height: 48svh;
+      overflow: hidden;
+      padding: 48px 18px 22px;
       border-radius: 42px 42px 0 0;
       background: #f5f5f5;
       color: var(--ink);
@@ -693,12 +707,12 @@
     }
 
     .about-reminder-card {
-      min-height: 88px;
-      padding: 16px 18px;
+      min-height: 72px;
+      padding: 13px 16px;
       border-radius: 8px;
       background: #fff;
       color: #4d4d52;
-      font-size: 18px;
+      font-size: 15px;
       font-weight: 500;
       line-height: 1.35;
       box-shadow: 0 1px 0 rgba(0, 0, 0, .02);
@@ -723,7 +737,7 @@
       bottom: max(18px, env(safe-area-inset-bottom));
       z-index: 12;
       display: grid;
-      gap: 12px;
+      gap: 10px;
       width: min(calc(100vw - 52px), 378px);
       text-align: center;
       transform: translateX(-50%);
@@ -733,7 +747,8 @@
       display: flex;
       justify-content: center;
       gap: 9px;
-      margin-bottom: 12px;
+      height: 14px;
+      margin-bottom: 6px;
     }
 
     .about-dot {
@@ -757,7 +772,7 @@
 
     .about-next {
       width: 100%;
-      min-height: 58px;
+      height: 58px;
       border: 0;
       border-radius: 999px;
       background: #fff;
@@ -773,6 +788,7 @@
     }
 
     .about-skip {
+      height: 28px;
       border: 0;
       background: transparent;
       color: #fff;
@@ -790,6 +806,35 @@
       font-size: 12px;
       font-weight: 600;
       text-align: center;
+      height: 16px;
+    }
+
+    .about-screen.slide-1 .about-logo {
+      margin-top: min(11svh, 82px);
+    }
+
+    .about-screen.slide-1 .about-copy {
+      margin-top: min(7svh, 58px);
+    }
+
+    .about-screen.slide-2 .about-content {
+      padding-top: 34px;
+    }
+
+    .about-screen.slide-2 .about-title,
+    .about-screen.slide-3 .about-title {
+      font-size: clamp(46px, 13vw, 70px);
+    }
+
+    .about-screen.slide-2 .about-copy,
+    .about-screen.slide-3 .about-copy {
+      margin: 14px auto 0;
+      font-size: 22px;
+      line-height: 1.2;
+    }
+
+    .about-screen.slide-3 .about-panel {
+      margin-top: 9svh;
     }
 
     .manage-header,
@@ -1722,7 +1767,7 @@
         light: true,
         centered: true,
         logo: false,
-        panel: true
+        panel: false
       }
     ];
     const homeCopy = {
@@ -2467,6 +2512,8 @@
     function renderAboutSlide() {
       const slide = aboutSlides[aboutSlideIndex];
       aboutScreen.style.backgroundImage = `url("${slide.background}")`;
+      aboutScreen.classList.remove("slide-1", "slide-2", "slide-3");
+      aboutScreen.classList.add(`slide-${aboutSlideIndex + 1}`);
       aboutScreen.classList.toggle("light-controls", slide.light);
       aboutTitle.textContent = slide.title;
       aboutTitle.classList.toggle("centered", slide.centered);
@@ -2532,6 +2579,7 @@
       app.classList.remove("checklist-mode");
       app.classList.remove("history-mode");
       app.classList.remove("home-mode");
+      reminderBanner.classList.remove("visible");
       app.classList.add("about-mode");
       renderAboutSlide();
     }

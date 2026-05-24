@@ -1,0 +1,3431 @@
+<!doctype html>
+<html lang="ms">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#02a83b">
+  <meta name="apple-mobile-web-app-title" content="JustSnap">
+  <meta name="application-name" content="JustSnap">
+  <link rel="icon" type="image/png" href="images/app-logo.png">
+  <link rel="apple-touch-icon" href="images/app-logo.png">
+  <title>JustSnap</title>
+  <style>
+    :root {
+      --green: #02a83b;
+      --green-dark: #009631;
+      --ink: #3d3d42;
+      --muted: #9a9a9f;
+      --line: #e4e4e7;
+      --page: #f2f2f2;
+      --white: #ffffff;
+      --shadow: 0 18px 40px rgba(15, 23, 42, .16);
+      color-scheme: light;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    @font-face {
+      font-family: "AG Book Rounded Bold";
+      src: url("fonts/ag-book-rounded-bold.otf") format("opentype");
+      font-weight: 700;
+      font-style: normal;
+      font-display: swap;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html,
+    body {
+      min-height: 100%;
+      margin: 0;
+      background: #dfe3e7;
+    }
+
+    body {
+      display: grid;
+      place-items: center;
+      overflow-x: hidden;
+    }
+
+    button,
+    input {
+      font: inherit;
+    }
+
+    .app {
+      position: relative;
+      width: min(100vw, 430px);
+      min-height: 100svh;
+      background: var(--page);
+      color: var(--ink);
+      overflow: hidden;
+      box-shadow: 0 0 0 1px rgba(0, 0, 0, .04), 0 24px 80px rgba(15, 23, 42, .22);
+    }
+
+    .viewfinder {
+      position: relative;
+      height: min(51svh, 462px);
+      min-height: 390px;
+      overflow: hidden;
+      border-bottom-left-radius: 20px;
+      border-bottom-right-radius: 20px;
+      isolation: isolate;
+      background:
+        radial-gradient(circle at 50% 34%, rgba(255, 255, 255, .08), transparent 34%),
+        linear-gradient(135deg, #15181c, #050607 65%);
+    }
+
+    .viewfinder::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      background: linear-gradient(180deg, rgba(11, 10, 12, .08), rgba(10, 10, 10, .03) 42%, rgba(11, 12, 16, .58) 100%);
+      pointer-events: none;
+    }
+
+    .camera-feed {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      background: #050607;
+      transform: scaleX(-1);
+    }
+
+    .camera-feed.environment {
+      transform: none;
+    }
+
+    .camera-fallback {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background:
+        radial-gradient(circle at 50% 35%, rgba(255, 255, 255, .1), transparent 31%),
+        linear-gradient(135deg, #20252b, #08090b 68%);
+      color: rgba(255, 255, 255, .74);
+      font-size: 16px;
+      font-weight: 750;
+      text-align: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .2s ease;
+    }
+
+    .viewfinder.camera-error .camera-fallback {
+      opacity: 1;
+    }
+
+    .detection-layer {
+      position: absolute;
+      inset: 0;
+      z-index: 2;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+
+    .top-controls {
+      position: absolute;
+      z-index: 4;
+      top: calc(max(12px, env(safe-area-inset-top)) + 28px);
+      left: 36px;
+      right: 36px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .icon-button {
+      display: grid;
+      place-items: center;
+      border: 0;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, .97);
+      color: var(--green);
+      cursor: pointer;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, .1);
+    }
+
+    .back-button {
+      width: 42px;
+      height: 42px;
+    }
+
+    .confirm-button {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      background: var(--green);
+      color: #fff;
+    }
+
+    .toast {
+      display: grid;
+      grid-template-columns: 54px 1fr;
+      align-items: center;
+      width: min(100%, 290px);
+      min-height: 48px;
+      border: 0;
+      border-radius: 24px;
+      background: rgba(255, 255, 255, .98);
+      color: var(--ink);
+      text-align: left;
+      cursor: pointer;
+      box-shadow: 0 10px 28px rgba(0, 0, 0, .12);
+      transform: translateY(-4px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .24s ease, transform .24s ease;
+    }
+
+    .toast.visible {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateY(0);
+    }
+
+    .item-dot {
+      display: block;
+      width: 42px;
+      aspect-ratio: 1;
+      margin-left: 6px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 0 5px #fff;
+      overflow: hidden;
+    }
+
+    .item-dot img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .toast-title,
+    .recent-name {
+      display: block;
+      color: #45454a;
+      font-weight: 800;
+      line-height: 1.05;
+    }
+
+    .toast-title {
+      font-size: 17px;
+    }
+
+    .toast-subtitle,
+    .recent-location {
+      display: block;
+      color: var(--muted);
+      font-weight: 500;
+      line-height: 1.18;
+    }
+
+    .toast-subtitle {
+      margin-top: 3px;
+      font-size: 15px;
+    }
+
+    .tracking-name {
+      position: absolute;
+      z-index: 3;
+      left: 20px;
+      right: 20px;
+      bottom: 20px;
+      color: #fff;
+      font-size: 19px;
+      font-weight: 850;
+      text-align: center;
+      text-shadow: 0 2px 18px rgba(0, 0, 0, .55);
+    }
+
+    .bag-tabs {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      padding: 18px 12px 15px;
+      overflow-x: auto;
+      overflow-y: hidden;
+      scrollbar-width: none;
+    }
+
+    .bag-tabs::-webkit-scrollbar {
+      display: none;
+    }
+
+    .bag-tab,
+    .add-tab {
+      flex: 0 0 auto;
+      min-height: 43px;
+      border: 0;
+      border-radius: 999px;
+      background: #fff;
+      color: #4a4a4f;
+      font-size: 17px;
+      font-weight: 800;
+      white-space: nowrap;
+      cursor: pointer;
+      box-shadow: 0 5px 18px rgba(15, 23, 42, .04);
+    }
+
+    .bag-tab {
+      width: max-content;
+      max-width: none;
+      padding: 0 18px;
+    }
+
+    .bag-tab.active {
+      background: var(--green);
+      color: #fff;
+    }
+
+    .add-tab {
+      display: grid;
+      place-items: center;
+      width: 43px;
+      color: var(--green);
+    }
+
+    .recent-card {
+      position: relative;
+      min-height: 390px;
+      margin: 0 12px 17px;
+      padding: 23px 24px 116px;
+      border-radius: 30px;
+      background: #fff;
+      box-shadow: 0 10px 26px rgba(15, 23, 42, .06);
+    }
+
+    .recent-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 15px;
+    }
+
+    .recent-title {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 850;
+      letter-spacing: 0;
+    }
+
+    .bell {
+      display: grid;
+      place-items: center;
+      width: 34px;
+      height: 34px;
+      border: 0;
+      border-radius: 50%;
+      background: transparent;
+      color: #b8b8be;
+      cursor: pointer;
+      transition: background .18s ease, color .18s ease, transform .18s ease;
+    }
+
+    .bell.active {
+      background: transparent;
+      color: var(--green);
+      transform: scale(1.03);
+    }
+
+    .bell svg {
+      width: 28px;
+      height: 28px;
+    }
+
+    .reminder-banner {
+      position: fixed;
+      left: 50%;
+      top: max(14px, env(safe-area-inset-top));
+      z-index: 30;
+      display: none;
+      width: min(calc(100vw - 24px), 406px);
+      padding: 14px;
+      border-radius: 20px;
+      background: #fff;
+      box-shadow: var(--shadow);
+      transform: translateX(-50%);
+    }
+
+    .reminder-banner.visible {
+      display: block;
+    }
+
+    .reminder-message {
+      margin: 0 0 12px;
+      color: var(--ink);
+      font-size: 16px;
+      font-weight: 800;
+      line-height: 1.25;
+    }
+
+    .reminder-check {
+      width: 100%;
+      min-height: 44px;
+      border: 0;
+      border-radius: 14px;
+      background: var(--green);
+      color: #fff;
+      font-weight: 850;
+      cursor: pointer;
+    }
+
+    .field-label {
+      display: grid;
+      gap: 7px;
+      margin-top: 12px;
+      color: #55555a;
+      font-size: 14px;
+      font-weight: 800;
+    }
+
+    .field-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .recent-list {
+      display: grid;
+      gap: 0;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .recent-item {
+      display: grid;
+      grid-template-columns: 52px 1fr;
+      gap: 17px;
+      align-items: center;
+      min-height: 74px;
+      padding: 8px 0 13px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .recent-item:last-child {
+      border-bottom: 0;
+    }
+
+    .recent-item .item-dot {
+      width: 42px;
+      margin-left: 0;
+      box-shadow: none;
+    }
+
+    .recent-name {
+      font-size: 18px;
+    }
+
+    .recent-location {
+      margin-top: 4px;
+      font-size: 16px;
+    }
+
+    .bottom-nav {
+      position: fixed;
+      left: 50%;
+      bottom: max(17px, env(safe-area-inset-bottom));
+      z-index: 10;
+      display: grid;
+      grid-template-columns: 1fr 1fr 76px 1fr 1fr;
+      align-items: center;
+      width: min(calc(100vw - 24px), 406px);
+      height: 92px;
+      padding: 10px 14px;
+      border-radius: 28px;
+      background: linear-gradient(180deg, #0ab943, #04a83d);
+      color: rgba(255, 255, 255, .62);
+      transform: translateX(-50%);
+      box-shadow: 0 16px 34px rgba(0, 150, 49, .27);
+    }
+
+    .app.manage-mode .viewfinder,
+    .app.manage-mode > .bag-tabs,
+    .app.manage-mode > .recent-card,
+    .app.checklist-mode .viewfinder,
+    .app.checklist-mode > .bag-tabs,
+    .app.checklist-mode > .recent-card,
+    .app.history-mode .viewfinder,
+    .app.history-mode > .bag-tabs,
+    .app.history-mode > .recent-card,
+    .app.home-mode .viewfinder,
+    .app.home-mode > .bag-tabs,
+    .app.home-mode > .recent-card,
+    .app.about-mode .viewfinder,
+    .app.about-mode > .bag-tabs,
+    .app.about-mode > .recent-card {
+      display: none;
+    }
+
+    .app.manage-mode,
+    .app.checklist-mode,
+    .app.history-mode,
+    .app.home-mode,
+    .app.about-mode {
+      overflow-y: auto;
+    }
+
+    .home-screen,
+    .manage-screen,
+    .checklist-screen,
+    .history-screen {
+      display: none;
+      min-height: 100svh;
+      padding: max(36px, env(safe-area-inset-top)) 12px 120px;
+      background: #f5f5f5;
+    }
+
+    .home-screen {
+      padding: 0 0 120px;
+      background: #f5f5f5;
+    }
+
+    .app.home-mode .home-screen {
+      display: block;
+    }
+
+    .app.manage-mode .manage-screen {
+      display: block;
+    }
+
+    .home-hero {
+      min-height: 44svh;
+      padding: max(42px, env(safe-area-inset-top)) 34px 36px;
+      border-radius: 0 0 34px 34px;
+      background: #08af3f url("images/home-bg.jpg") center / cover no-repeat;
+      color: #fff;
+    }
+
+    .home-topbar {
+      display: flex;
+      justify-content: flex-end;
+      min-height: 50px;
+    }
+
+    .language-toggle {
+      min-width: 64px;
+      height: 46px;
+      border: 0;
+      border-radius: 13px;
+      background: #fff;
+      color: #4a4a50;
+      font-size: 18px;
+      font-weight: 900;
+      cursor: pointer;
+      box-shadow: 0 10px 24px rgba(0, 0, 0, .08);
+    }
+
+    .home-title {
+      max-width: 360px;
+      margin: 50px 0 52px;
+      color: #fff;
+      font-family: "AG Book Rounded Bold", Inter, ui-sans-serif, system-ui, sans-serif;
+      font-size: clamp(50px, 15vw, 74px);
+      font-weight: 950;
+      line-height: .92;
+      letter-spacing: 0;
+    }
+
+    .home-start {
+      width: 100%;
+      min-height: 58px;
+      border: 0;
+      border-radius: 999px;
+      background: #fff;
+      color: rgba(0, 150, 49, .62);
+      font-size: 28px;
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    .sponsored-area {
+      padding: 70px 0 18px;
+      background: #f5f5f5;
+    }
+
+    .sponsored-title {
+      margin: 0 36px 18px;
+      color: #8b8b90;
+      font-size: 20px;
+      font-weight: 650;
+    }
+
+    .ad-rail {
+      display: grid;
+      grid-auto-flow: column;
+      grid-auto-columns: minmax(280px, 78%);
+      gap: 12px;
+      overflow-x: auto;
+      padding: 0 36px 18px;
+      scroll-snap-type: x mandatory;
+      scrollbar-width: none;
+    }
+
+    .ad-rail::-webkit-scrollbar {
+      display: none;
+    }
+
+    .ad-card {
+      height: 215px;
+      overflow: hidden;
+      border-radius: 8px;
+      background: #fff;
+      scroll-snap-align: center;
+      box-shadow: 0 10px 24px rgba(0, 0, 0, .05);
+    }
+
+    .ad-card img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .learn-more {
+      margin: 0;
+      color: #9c9ca1;
+      font-size: 19px;
+      font-weight: 600;
+      text-align: center;
+    }
+
+    .app.checklist-mode .checklist-screen {
+      display: block;
+    }
+
+    .app.history-mode .history-screen {
+      display: block;
+    }
+
+    .about-screen {
+      position: relative;
+      display: none;
+      min-height: 100svh;
+      overflow: hidden;
+      padding: max(38px, env(safe-area-inset-top)) 26px max(22px, env(safe-area-inset-bottom));
+      background: #06ad3d center / cover no-repeat;
+      color: #fff;
+    }
+
+    .app.about-mode .about-screen {
+      display: grid;
+      grid-template-rows: 1fr auto;
+    }
+
+    .app.about-mode .bottom-nav,
+    .app.about-mode > .brand {
+      display: none;
+    }
+
+    .about-island {
+      display: none;
+    }
+
+    .about-content {
+      position: relative;
+      display: grid;
+      align-content: start;
+      min-height: 0;
+      padding-top: 72px;
+    }
+
+    .about-title {
+      margin: 0;
+      color: #fff;
+      font-family: "AG Book Rounded Bold", Inter, ui-sans-serif, system-ui, sans-serif;
+      font-size: clamp(46px, 16vw, 72px);
+      font-weight: 950;
+      line-height: .92;
+      letter-spacing: 0;
+    }
+
+    .about-title.centered {
+      text-align: center;
+    }
+
+    .about-logo {
+      width: 150px;
+      height: 150px;
+      margin-top: 82px;
+      object-fit: contain;
+      transform: rotate(-8deg);
+    }
+
+    .about-copy {
+      margin: auto auto 56px;
+      max-width: 340px;
+      color: currentColor;
+      font-size: 20px;
+      font-weight: 500;
+      line-height: 1.23;
+      text-align: center;
+    }
+
+    .about-panel {
+      display: none;
+      align-self: end;
+      margin: 0 -26px 28px;
+      padding: 70px 18px 26px;
+      border-radius: 42px 42px 0 0;
+      background: #f5f5f5;
+      color: var(--ink);
+    }
+
+    .about-reminders {
+      display: grid;
+      gap: 12px;
+    }
+
+    .about-reminder-card {
+      min-height: 88px;
+      padding: 16px 18px;
+      border-radius: 8px;
+      background: #fff;
+      color: #4d4d52;
+      font-size: 18px;
+      font-weight: 500;
+      line-height: 1.35;
+      box-shadow: 0 1px 0 rgba(0, 0, 0, .02);
+    }
+
+    .about-reminder-card strong {
+      color: #3f3f44;
+      font-weight: 850;
+    }
+
+    .about-reminder-card span {
+      display: block;
+      margin-top: 10px;
+      color: var(--green);
+      font-weight: 850;
+      text-align: right;
+    }
+
+    .about-actions {
+      display: grid;
+      gap: 12px;
+      text-align: center;
+    }
+
+    .about-dots {
+      display: flex;
+      justify-content: center;
+      gap: 9px;
+      margin-bottom: 12px;
+    }
+
+    .about-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, .38);
+    }
+
+    .about-dot.active {
+      background: #fff;
+    }
+
+    .about-screen.light-controls .about-dot {
+      background: rgba(0, 169, 62, .25);
+    }
+
+    .about-screen.light-controls .about-dot.active {
+      background: var(--green);
+    }
+
+    .about-next {
+      width: 100%;
+      min-height: 58px;
+      border: 0;
+      border-radius: 999px;
+      background: #fff;
+      color: rgba(0, 169, 62, .58);
+      font-size: 28px;
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    .about-screen.light-controls .about-next {
+      background: var(--green);
+      color: #fff;
+    }
+
+    .about-skip {
+      border: 0;
+      background: transparent;
+      color: #fff;
+      font-size: 20px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+
+    .about-screen.light-controls .about-skip {
+      color: rgba(0, 150, 49, .72);
+    }
+
+    .about-brand {
+      color: rgba(0, 0, 0, .14);
+      font-size: 12px;
+      font-weight: 600;
+      text-align: center;
+    }
+
+    .manage-header,
+    .checklist-header,
+    .history-header {
+      padding: 20px 28px 24px;
+    }
+
+    .manage-heading,
+    .checklist-heading,
+    .history-heading {
+      margin: 0;
+      color: #45454a;
+      font-size: 24px;
+      font-weight: 850;
+      line-height: 1.05;
+    }
+
+    .manage-subtitle,
+    .checklist-subtitle,
+    .history-subtitle {
+      margin: 3px 0 0;
+      color: #8f8f95;
+      font-size: 18px;
+      font-weight: 500;
+      line-height: 1.1;
+    }
+
+    .checklist-rule {
+      height: 3px;
+      margin: 20px 0 0;
+      border-radius: 999px;
+      background: #d9d9d9;
+      overflow: hidden;
+    }
+
+    .checklist-progress {
+      display: block;
+      width: 0%;
+      height: 100%;
+      border-radius: inherit;
+      background: var(--green);
+      transition: width .24s ease;
+    }
+
+    .manage-tabs {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      padding: 0 12px 18px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+
+    .manage-tabs::-webkit-scrollbar {
+      display: none;
+    }
+
+    .manage-tab,
+    .manage-add-tab {
+      flex: 0 0 auto;
+      width: max-content;
+      min-height: 43px;
+      border: 0;
+      border-radius: 999px;
+      background: #fff;
+      color: #4a4a4f;
+      font-size: 17px;
+      font-weight: 800;
+      white-space: nowrap;
+      cursor: pointer;
+      box-shadow: 0 5px 18px rgba(15, 23, 42, .04);
+    }
+
+    .manage-tab {
+      padding: 0 18px;
+    }
+
+    .manage-tab.active {
+      background: var(--green);
+      color: #fff;
+    }
+
+    .manage-add-tab {
+      display: grid;
+      place-items: center;
+      width: 43px;
+      color: var(--green);
+    }
+
+    .manage-content {
+      display: grid;
+      gap: 14px;
+      padding: 0 0 22px;
+    }
+
+    .manage-card {
+      padding: 22px 24px 14px;
+      border-radius: 24px;
+      background: #fff;
+      box-shadow: 0 10px 26px rgba(15, 23, 42, .04);
+      scroll-margin-top: 18px;
+    }
+
+    .manage-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+
+    .manage-card-title {
+      margin: 0;
+      color: #45454a;
+      font-size: 20px;
+      font-weight: 850;
+    }
+
+    .manage-card .bell {
+      cursor: default;
+    }
+
+    .manage-list {
+      display: grid;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .manage-item {
+      display: grid;
+      grid-template-columns: 52px 1fr 34px;
+      gap: 16px;
+      align-items: center;
+      min-height: 72px;
+      padding: 8px 0 13px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .manage-item.drag-source {
+      opacity: .35;
+    }
+
+    .manage-item .item-dot {
+      cursor: grab;
+      touch-action: none;
+    }
+
+    .manage-card.drop-target,
+    .manage-tab.drop-target {
+      outline: 3px solid rgba(2, 168, 59, .28);
+      outline-offset: 3px;
+    }
+
+    .drag-ghost {
+      position: fixed;
+      left: 0;
+      top: 0;
+      z-index: 40;
+      display: grid;
+      grid-template-columns: 44px auto;
+      gap: 10px;
+      align-items: center;
+      max-width: 260px;
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, .96);
+      color: var(--ink);
+      font-size: 15px;
+      font-weight: 850;
+      pointer-events: none;
+      box-shadow: var(--shadow);
+      transform: translate(-50%, -50%);
+    }
+
+    .drag-ghost .item-dot {
+      width: 36px;
+      margin: 0;
+      box-shadow: none;
+    }
+
+    .manage-item:last-child {
+      border-bottom: 0;
+    }
+
+    .delete-item {
+      display: grid;
+      place-items: center;
+      width: 34px;
+      height: 34px;
+      border: 0;
+      border-radius: 50%;
+      background: transparent;
+      color: #b8b8be;
+      cursor: pointer;
+    }
+
+    .delete-item svg {
+      width: 25px;
+      height: 25px;
+    }
+
+    .empty-manage {
+      margin: 4px 0 10px;
+      color: #9a9a9f;
+      font-size: 15px;
+      font-weight: 650;
+    }
+
+    .checklist-content {
+      display: grid;
+      gap: 22px;
+      padding: 14px 22px 118px;
+    }
+
+    .checklist-group {
+      display: grid;
+      gap: 10px;
+    }
+
+    .checklist-title {
+      margin: 0 0 2px;
+      color: #45454a;
+      font-size: 20px;
+      font-weight: 850;
+    }
+
+    .checklist-list {
+      display: grid;
+      gap: 10px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .checklist-item {
+      display: grid;
+      grid-template-columns: 42px 64px 1fr;
+      align-items: center;
+      min-height: 76px;
+      padding: 6px 18px 6px 14px;
+      border-radius: 999px;
+      background: #fff;
+      box-shadow: 0 8px 20px rgba(15, 23, 42, .035);
+    }
+
+    .checklist-box {
+      display: grid;
+      place-items: center;
+      width: 28px;
+      height: 28px;
+      border: 2px solid #ababaf;
+      border-radius: 8px;
+      background: #fff;
+      color: #fff;
+      cursor: pointer;
+    }
+
+    .checklist-box input {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .checklist-box svg {
+      width: 20px;
+      height: 20px;
+      opacity: 0;
+    }
+
+    .checklist-box:has(input:checked) {
+      border-color: var(--green);
+      background: var(--green);
+    }
+
+    .checklist-box:has(input:checked) svg {
+      opacity: 1;
+    }
+
+    .checklist-item .item-dot {
+      width: 52px;
+      margin: 0;
+      box-shadow: none;
+    }
+
+    .checkout-footer {
+      position: fixed;
+      left: 50%;
+      bottom: 118px;
+      z-index: 7;
+      width: min(calc(100vw - 44px), 386px);
+      text-align: center;
+      transform: translateX(-50%);
+    }
+
+    .confirm-checkout {
+      width: 100%;
+      min-height: 58px;
+      border: 0;
+      border-radius: 999px;
+      background: var(--green);
+      color: #fff;
+      font-size: 21px;
+      font-weight: 850;
+      cursor: pointer;
+      box-shadow: 0 12px 26px rgba(0, 150, 49, .18);
+    }
+
+    .checkout-warning {
+      margin: -16px 0 0;
+      color: rgba(255, 255, 255, .48);
+      font-size: 12px;
+      font-weight: 650;
+      pointer-events: none;
+    }
+
+    .history-content {
+      display: grid;
+      gap: 16px;
+      padding: 0 22px 24px;
+    }
+
+    .history-card {
+      position: relative;
+      padding: 16px 14px 14px;
+      border-radius: 18px;
+      background: #fff;
+      box-shadow: 0 9px 22px rgba(15, 23, 42, .04);
+    }
+
+    .history-time {
+      margin: 0 86px 8px 0;
+      color: #45454a;
+      font-size: 19px;
+      font-weight: 850;
+      line-height: 1.15;
+    }
+
+    .history-ratio {
+      position: absolute;
+      top: 16px;
+      right: 14px;
+      min-width: 54px;
+      padding: 3px 10px;
+      border-radius: 8px;
+      background: rgba(2, 168, 59, .14);
+      color: #3d3d42;
+      font-size: 19px;
+      font-weight: 800;
+      text-align: center;
+    }
+
+    .history-meta {
+      margin: 0 0 12px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--line);
+      color: #8f8f95;
+      font-size: 14px;
+      font-weight: 650;
+      line-height: 1.25;
+    }
+
+    .history-list {
+      display: grid;
+      gap: 10px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .history-item {
+      display: grid;
+      grid-template-columns: 52px 1fr;
+      gap: 14px;
+      align-items: center;
+      min-height: 54px;
+    }
+
+    .history-item .item-dot {
+      width: 46px;
+      margin: 0;
+      box-shadow: none;
+    }
+
+    .history-status {
+      color: #9a9a9f;
+      font-weight: 650;
+    }
+
+    .history-status.checked {
+      color: #8e8e94;
+    }
+
+    .history-status.unchecked {
+      color: #b46b6b;
+    }
+
+    .nav-item {
+      display: grid;
+      place-items: center;
+      gap: 3px;
+      min-width: 0;
+      color: rgba(255, 255, 255, .62);
+      font-size: 12px;
+      font-weight: 500;
+      text-decoration: none;
+    }
+
+    .app.manage-mode .nav-manage {
+      color: #fff;
+    }
+
+    .app.checklist-mode .nav-checklist {
+      color: #fff;
+    }
+
+    .app.history-mode .nav-history {
+      color: #fff;
+    }
+
+    .app.home-mode .camera-action,
+    .app.manage-mode .camera-action,
+    .app.checklist-mode .camera-action,
+    .app.history-mode .camera-action {
+      background: rgba(190, 239, 195, .92);
+      color: var(--green);
+      box-shadow: 0 12px 24px rgba(0, 0, 0, .08);
+    }
+
+    .app.home-mode .camera-action svg,
+    .app.manage-mode .camera-action svg,
+    .app.checklist-mode .camera-action svg,
+    .app.history-mode .camera-action svg {
+      width: 48px;
+      height: 48px;
+    }
+
+    .nav-item svg {
+      width: 28px;
+      height: 28px;
+      opacity: .78;
+    }
+
+    .camera-action {
+      display: grid;
+      place-items: center;
+      width: 72px;
+      height: 72px;
+      margin: 0 auto;
+      border: 0;
+      border-radius: 50%;
+      background: #fff;
+      color: var(--green);
+      cursor: pointer;
+      box-shadow: 0 12px 24px rgba(0, 0, 0, .12);
+    }
+
+    .camera-action svg {
+      width: 48px;
+      height: 48px;
+    }
+
+    .brand {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 1px;
+      z-index: 4;
+      color: rgba(155, 155, 160, .46);
+      font-size: 12px;
+      font-weight: 500;
+      text-align: center;
+      pointer-events: none;
+    }
+
+    .edit-sheet {
+      position: fixed;
+      inset: 0;
+      z-index: 20;
+      display: none;
+      place-items: end center;
+      padding: 18px;
+      background: rgba(22, 22, 25, .38);
+    }
+
+    .edit-sheet.open {
+      display: grid;
+    }
+
+    .edit-panel {
+      width: min(100%, 392px);
+      padding: 18px;
+      border-radius: 24px;
+      background: #fff;
+      box-shadow: var(--shadow);
+    }
+
+    .edit-panel h2 {
+      margin: 0 0 6px;
+      font-size: 20px;
+      line-height: 1.1;
+    }
+
+    .edit-note {
+      display: none;
+      margin: 0 0 13px;
+      color: #77777d;
+      font-size: 14px;
+      font-weight: 650;
+      line-height: 1.25;
+    }
+
+    .edit-note.visible {
+      display: block;
+    }
+
+    .name-input {
+      width: 100%;
+      height: 48px;
+      padding: 0 14px;
+      border: 1px solid #d9d9de;
+      border-radius: 14px;
+      outline: none;
+      color: var(--ink);
+      font-size: 17px;
+      font-weight: 700;
+    }
+
+    .sheet-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .sheet-button {
+      min-height: 46px;
+      border: 0;
+      border-radius: 14px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .sheet-button.cancel {
+      background: #eeeeef;
+      color: #55555a;
+    }
+
+    .sheet-button.save {
+      background: var(--green);
+      color: #fff;
+    }
+
+    .warning-panel {
+      text-align: center;
+    }
+
+    .warning-icon {
+      display: grid;
+      place-items: center;
+      width: 58px;
+      height: 58px;
+      margin: 0 auto 12px;
+      border-radius: 50%;
+      background: rgba(2, 168, 59, .12);
+      color: var(--green);
+      font-size: 30px;
+      font-weight: 900;
+    }
+
+    .warning-panel h2 {
+      margin-bottom: 8px;
+    }
+
+    .warning-text {
+      margin: 0 0 16px;
+      color: #77777d;
+      font-size: 15px;
+      font-weight: 700;
+      line-height: 1.35;
+    }
+
+    .warning-primary {
+      width: 100%;
+      min-height: 48px;
+      border: 0;
+      border-radius: 16px;
+      background: var(--green);
+      color: #fff;
+      font-size: 16px;
+      font-weight: 850;
+      cursor: pointer;
+    }
+
+    @media (min-width: 520px) {
+      .app {
+        min-height: 860px;
+        margin: 24px 0;
+        border-radius: 44px;
+      }
+
+      .bottom-nav,
+      .brand,
+      .checkout-footer {
+        position: absolute;
+      }
+
+      .app.home-mode .bottom-nav,
+      .app.home-mode > .brand {
+        position: fixed;
+      }
+
+      .checkout-footer {
+        left: 22px;
+        right: 22px;
+        width: auto;
+        transform: none;
+      }
+    }
+
+    @media (max-width: 380px) {
+      .top-controls {
+        left: 26px;
+        right: 26px;
+      }
+
+      .bag-tab {
+        padding: 0 14px;
+        font-size: 15px;
+      }
+
+      .recent-card {
+        padding-inline: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app" aria-label="JustSnap scan screen">
+    <section class="viewfinder" id="viewfinder" aria-label="Paparan kamera pintar">
+      <video class="camera-feed" id="cameraFeed" autoplay muted playsinline aria-label="Kamera scan item"></video>
+      <canvas class="detection-layer" id="detectionLayer" aria-hidden="true"></canvas>
+      <div class="camera-fallback" id="cameraFallback" aria-live="polite">Benarkan akses kamera untuk scan item</div>
+      <div class="top-controls">
+        <button class="toast visible" type="button" id="toast" aria-label="Tukar nama item">
+          <span class="item-dot" aria-hidden="true"></span>
+          <span>
+            <span class="toast-title" id="toastTitle">Item Name</span>
+            <span class="toast-subtitle" id="toastSubtitle">Stored at bag bagasi</span>
+          </span>
+        </button>
+      </div>
+      <div class="tracking-name" id="trackingName">Item Name</div>
+    </section>
+
+    <section class="home-screen" id="homeScreen" aria-label="Home">
+      <div class="home-hero">
+        <div class="home-topbar">
+          <button class="language-toggle" id="languageToggle" type="button">EN</button>
+        </div>
+        <h1 class="home-title" id="homeTitle">Hello, Let's scan your item now !!</h1>
+        <button class="home-start" id="homeStart" type="button">Let's Goo</button>
+      </div>
+      <section class="sponsored-area" aria-label="Sponsored content">
+        <h2 class="sponsored-title" id="sponsoredTitle">Sponsored</h2>
+        <div class="ad-rail">
+          <article class="ad-card"><img src="images/ad-happybaby.webp" alt="Happybaby sponsored poster"></article>
+          <article class="ad-card"><img src="images/ad-travel.jpeg" alt="Travel sponsored poster"></article>
+          <article class="ad-card"><img src="images/ad-oralb.jpeg" alt="Oral B sponsored poster"></article>
+        </div>
+        <p class="learn-more" id="learnMore">Learn more..</p>
+      </section>
+    </section>
+
+    <nav class="bag-tabs" aria-label="Pilihan beg">
+      <button class="bag-tab active" type="button" data-bag="beg bagasi">Beg Bagasi</button>
+      <button class="bag-tab" type="button" data-bag="beg sandang">Beg sandang</button>
+      <button class="bag-tab" type="button" data-bag="beg tangan">Beg Tangan</button>
+      <button class="add-tab" type="button" id="addBag" aria-label="Tambah kategori beg">
+        <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
+          <path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="3.3" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </nav>
+
+    <section class="recent-card" aria-label="Recent Add">
+      <div class="recent-header">
+        <h1 class="recent-title">Recent Add</h1>
+        <button class="bell" id="reminderBell" type="button" aria-label="Aktifkan reminder checkout">
+          <svg viewBox="0 0 24 24" width="28" height="28">
+            <path d="M17 9a5 5 0 0 0-10 0v3.3c0 .7-.3 1.3-.8 1.8L5 15.3V17h14v-1.7l-1.2-1.2a2.5 2.5 0 0 1-.8-1.8V9Z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/>
+            <path d="M9.5 19a2.7 2.7 0 0 0 5 0M4 9.4C4 7 5.1 4.9 6.9 3.5M20 9.4c0-2.4-1.1-4.5-2.9-5.9" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+      <ul class="recent-list" id="recentList"></ul>
+    </section>
+
+    <section class="manage-screen" id="manageScreen" aria-label="Pengurusan barangan">
+      <header class="manage-header">
+        <div>
+          <h1 class="manage-heading">Manage</h1>
+          <p class="manage-subtitle">Urus bag dan isi di dalam bag</p>
+        </div>
+      </header>
+
+      <nav class="manage-tabs" id="manageTabs" aria-label="Kategori beg"></nav>
+      <div class="manage-content" id="manageContent"></div>
+    </section>
+
+    <section class="checklist-screen" id="checklistScreen" aria-label="Checklist pulang">
+      <header class="checklist-header">
+        <h1 class="checklist-heading">Checklist Pulang</h1>
+        <p class="checklist-subtitle">Semak semua barang sebelum pulang</p>
+        <div class="checklist-rule" aria-hidden="true">
+          <span class="checklist-progress" id="checklistProgress"></span>
+        </div>
+      </header>
+
+      <div class="checklist-content" id="checklistContent"></div>
+      <div class="checkout-footer">
+        <button class="confirm-checkout" id="confirmCheckout" type="button">Confirm Checkout</button>
+        <p class="checkout-warning">If you Checkout all checklist will be deleted.</p>
+      </div>
+    </section>
+
+    <section class="history-screen" id="historyScreen" aria-label="Rekod perjalanan">
+      <header class="history-header">
+        <h1 class="history-heading">History</h1>
+        <p class="history-subtitle">Rekod trip dan checkout yang sudah selesai</p>
+      </header>
+      <div class="history-content" id="historyContent"></div>
+    </section>
+
+    <section class="about-screen" id="aboutScreen" aria-label="About JustSnap">
+      <div class="about-island" aria-hidden="true"></div>
+      <div class="about-content">
+        <h1 class="about-title" id="aboutTitle">Welcome to JustSnap.</h1>
+        <img class="about-logo" id="aboutLogo" src="images/white-logo.png" alt="JustSnap logo">
+        <p class="about-copy" id="aboutCopy">Your smart travel companion that helps make sure nothing gets left behind.</p>
+        <div class="about-panel" id="aboutPanel" aria-hidden="true">
+          <div class="about-reminders">
+            <div class="about-reminder-card">We noticed you have not scanned <strong>passport</strong>. Did you forget to bring it?<span>OK</span></div>
+            <div class="about-reminder-card">We noticed you have not scanned <strong>Cable Phone</strong>. Did you forget to bring it?<span>OK</span></div>
+            <div class="about-reminder-card">We noticed you have not scanned <strong>Toothbrush</strong>. Did you forget to bring it?<span>OK</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="about-actions">
+        <div class="about-dots" id="aboutDots" aria-label="Slide indicator"></div>
+        <button class="about-next" id="aboutNext" type="button">Next</button>
+        <button class="about-skip" id="aboutSkip" type="button">Skip</button>
+        <div class="about-brand">JustSnap 2026 by Muaz Azlan</div>
+      </div>
+    </section>
+
+    <nav class="bottom-nav" aria-label="Menu utama">
+      <a class="nav-item nav-manage" id="manageNav" href="#" aria-label="Manage">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M7 8V6.5A5 5 0 0 1 12 1.5a5 5 0 0 1 5 5V8" fill="none" stroke="currentColor" stroke-width="1.8"/>
+          <path d="M5.4 8h13.2l1.1 12.5H4.3L5.4 8Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+          <path d="M8 11v6M16 11v6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+        <span>Manage</span>
+      </a>
+      <a class="nav-item nav-checklist" id="checklistNav" href="#" aria-label="Checklist">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <rect x="4" y="3" width="16" height="18" rx="4" fill="none" stroke="currentColor" stroke-width="1.8"/>
+          <path d="m8 9 1.4 1.4L12.5 7M14 10h3M8 16h9" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span>Checklist</span>
+      </a>
+      <button class="camera-action nav-camera" type="button" id="cameraButton" aria-label="Snap kamera">
+        <svg viewBox="0 0 24 24" width="52" height="52" aria-hidden="true">
+          <path d="M7.5 7.2 9 4.8h6l1.5 2.4H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h3.5Z" fill="currentColor"/>
+          <circle cx="12" cy="13.2" r="4" fill="#fff"/>
+          <circle cx="19" cy="9.4" r="1" fill="#fff"/>
+          <circle cx="12" cy="13.2" r="2.5" fill="currentColor"/>
+        </svg>
+      </button>
+      <a class="nav-item nav-history" id="historyNav" href="#" aria-label="History">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M5.5 7.5A8 8 0 1 1 4 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          <path d="M5.5 3.5v4h4M12 7.5V13l-3 2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span>History</span>
+      </a>
+      <a class="nav-item nav-about" id="aboutNav" href="#" aria-label="About us">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M15 12a5 5 0 1 0-7.2 4.5C4.8 17.6 3 19.5 3 22h10.2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          <circle cx="17.5" cy="17.5" r="4" fill="none" stroke="currentColor" stroke-width="1.8"/>
+          <path d="M17.5 16.8v3M17.5 15.1v.1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+        <span>About us</span>
+      </a>
+    </nav>
+    <div class="brand">JustSnap 2026 by Muaz Azlan</div>
+  </main>
+
+  <div class="reminder-banner" id="reminderBanner" role="status" aria-live="polite">
+    <p class="reminder-message" id="reminderMessage">Dah nak checkout, jom check item.</p>
+    <button class="reminder-check" id="reminderCheck" type="button">Check Item</button>
+  </div>
+
+  <div class="edit-sheet" id="editSheet" role="dialog" aria-modal="true" aria-labelledby="editTitle">
+    <form class="edit-panel" id="editForm">
+      <h2 id="editTitle">Tukar Nama Item</h2>
+      <p class="edit-note" id="editNote"></p>
+      <input class="name-input" id="nameInput" type="text" value="Item Name" autocomplete="off" aria-label="Nama item">
+      <div class="sheet-actions">
+        <button class="sheet-button cancel" id="cancelEdit" type="button">Batal</button>
+        <button class="sheet-button save" type="submit">Simpan</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="edit-sheet" id="bagSheet" role="dialog" aria-modal="true" aria-labelledby="bagTitle">
+    <form class="edit-panel" id="bagForm">
+      <h2 id="bagTitle">Masukkan Nama Bag Anda</h2>
+      <input class="name-input" id="bagInput" type="text" placeholder="Contoh: Beg Kerja" autocomplete="off" aria-label="Nama bag">
+      <div class="sheet-actions">
+        <button class="sheet-button cancel" id="cancelBag" type="button">Batal</button>
+        <button class="sheet-button save" type="submit">Tambah</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="edit-sheet" id="reminderSheet" role="dialog" aria-modal="true" aria-labelledby="reminderTitle">
+    <form class="edit-panel" id="reminderForm">
+      <h2 id="reminderTitle">Reminder Checkout</h2>
+      <p class="edit-note visible">Tetapkan masa dan lokasi untuk ingatkan semak item.</p>
+      <div class="field-row">
+        <label class="field-label">Tarikh
+          <input class="name-input" id="reminderDate" type="date" aria-label="Tarikh reminder">
+        </label>
+        <label class="field-label">Masa
+          <input class="name-input" id="reminderTime" type="time" aria-label="Masa reminder">
+        </label>
+      </div>
+      <label class="field-label">Lokasi
+        <input class="name-input" id="reminderLocation" type="text" value="Lokasi semasa" aria-label="Lokasi reminder">
+      </label>
+      <div class="sheet-actions">
+        <button class="sheet-button cancel" id="cancelReminder" type="button">Batal</button>
+        <button class="sheet-button save" type="submit">Aktifkan</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="edit-sheet" id="reminderManageSheet" role="dialog" aria-modal="true" aria-labelledby="reminderManageTitle">
+    <form class="edit-panel" id="reminderManageForm">
+      <h2 id="reminderManageTitle">Reminder Aktif</h2>
+      <p class="edit-note visible">Pilih tindakan untuk reminder checkout.</p>
+      <div class="sheet-actions">
+        <button class="sheet-button cancel" id="disableReminder" type="button">Nyahaktif</button>
+        <button class="sheet-button save" id="resetReminder" type="button">Set Semula</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="edit-sheet" id="checkoutWarningSheet" role="dialog" aria-modal="true" aria-labelledby="checkoutWarningTitle">
+    <div class="edit-panel warning-panel">
+      <div class="warning-icon" aria-hidden="true">!</div>
+      <h2 id="checkoutWarningTitle">Ada Item Belum Disemak</h2>
+      <p class="warning-text" id="checkoutWarningText">Anda mempunyai barang yang belum disemak. Pastikan tiada item tertinggal sebelum checkout.</p>
+      <button class="warning-primary" id="reviewChecklist" type="button">Semak Checklist</button>
+    </div>
+  </div>
+
+  <script src="vendor/tf.min.js"></script>
+  <script src="vendor/coco-ssd.min.js"></script>
+  <script>
+    const itemNames = ["Item Name", "Powerbank", "Kabel USB-C", "Passport", "AirPods", "Dompet"];
+    let snapCount = 0;
+    let selectedBag = "beg bagasi";
+    let currentName = "Item Name";
+    let toastTimer;
+    let detectorModel = null;
+    let detectionLoopStarted = false;
+    let lastDetectedName = "No item";
+    let stableDetection = { name: "No item", count: 0 };
+    let currentBestPrediction = null;
+    let currentSnapImage = "";
+    let currentSnapSignature = null;
+    let audioContext = null;
+    let focusPoint = null;
+    let focusAssistUntil = 0;
+    let detectionVotes = [];
+    let habitReminderShown = false;
+    let reminderConfig = null;
+    let reminderTimer = null;
+    let reminderFired = { far: false, exact: false };
+    let itemIdCounter = 1;
+    let manageActiveBag = "all";
+    let dragState = null;
+    let aboutSlideIndex = 0;
+    let cameraStarted = false;
+    let homeLanguage = "EN";
+    const checkedItems = new Set();
+    const checkoutHistoryKey = "justsnapCheckoutHistory";
+    const onboardingStorageKey = "justsnapOnboardingSeen";
+    const visualMemoryKey = "justsnapVisualMemory";
+    const bagNames = ["beg bagasi", "beg sandang", "beg tangan"];
+    const aboutSlides = [
+      {
+        title: "Welcome to JustSnap.",
+        copy: "Your smart travel companion that helps make sure nothing gets left behind.",
+        background: "images/about-1-bg.jpg",
+        button: "Next",
+        light: false,
+        centered: false,
+        logo: true,
+        panel: false
+      },
+      {
+        title: "Just Snap & List.",
+        copy: "Scan your travel items with AI. JustSnap identifies them and builds your checklist automatically.",
+        background: "images/about-2-bg-v2.jpg",
+        button: "Next",
+        light: true,
+        centered: true,
+        logo: false,
+        panel: false,
+        hideText: false
+      },
+      {
+        title: "Smart Reminder.",
+        copy: "Get smart reminders before checkout and when important items may be missing.",
+        background: "images/about-3-bg.jpg",
+        button: "Start Now",
+        light: true,
+        centered: true,
+        logo: false,
+        panel: true
+      }
+    ];
+    const homeCopy = {
+      EN: {
+        title: "Hello, Let's scan your item now !!",
+        button: "Let's Goo",
+        sponsored: "Sponsored",
+        learn: "Learn more.."
+      },
+      MY: {
+        title: "Hai, jom scan barang anda sekarang !!",
+        button: "Jom Mula",
+        sponsored: "Tajaan",
+        learn: "Ketahui lagi.."
+      }
+    };
+
+    const toast = document.getElementById("toast");
+    const toastDot = toast.querySelector(".item-dot");
+    const toastTitle = document.getElementById("toastTitle");
+    const toastSubtitle = document.getElementById("toastSubtitle");
+    const trackingName = document.getElementById("trackingName");
+    const viewfinder = document.getElementById("viewfinder");
+    const cameraFeed = document.getElementById("cameraFeed");
+    const detectionLayer = document.getElementById("detectionLayer");
+    const detectionContext = detectionLayer.getContext("2d");
+    const cameraFallback = document.getElementById("cameraFallback");
+    const recentList = document.getElementById("recentList");
+    const app = document.querySelector(".app");
+    const homeTitle = document.getElementById("homeTitle");
+    const homeStart = document.getElementById("homeStart");
+    const languageToggle = document.getElementById("languageToggle");
+    const sponsoredTitle = document.getElementById("sponsoredTitle");
+    const learnMore = document.getElementById("learnMore");
+    const manageNav = document.getElementById("manageNav");
+    const checklistNav = document.getElementById("checklistNav");
+    const historyNav = document.getElementById("historyNav");
+    const aboutNav = document.getElementById("aboutNav");
+    const manageTabs = document.getElementById("manageTabs");
+    const manageContent = document.getElementById("manageContent");
+    const checklistContent = document.getElementById("checklistContent");
+    const historyContent = document.getElementById("historyContent");
+    const aboutScreen = document.getElementById("aboutScreen");
+    const aboutTitle = document.getElementById("aboutTitle");
+    const aboutLogo = document.getElementById("aboutLogo");
+    const aboutCopy = document.getElementById("aboutCopy");
+    const aboutPanel = document.getElementById("aboutPanel");
+    const aboutDots = document.getElementById("aboutDots");
+    const aboutNext = document.getElementById("aboutNext");
+    const aboutSkip = document.getElementById("aboutSkip");
+    const confirmCheckoutButton = document.getElementById("confirmCheckout");
+    const checkoutWarningSheet = document.getElementById("checkoutWarningSheet");
+    const checkoutWarningText = document.getElementById("checkoutWarningText");
+    const reviewChecklist = document.getElementById("reviewChecklist");
+    const checklistProgress = document.getElementById("checklistProgress");
+    let checkoutWarningTimer = null;
+    const editSheet = document.getElementById("editSheet");
+    const editTitle = document.getElementById("editTitle");
+    const editNote = document.getElementById("editNote");
+    const editForm = document.getElementById("editForm");
+    const nameInput = document.getElementById("nameInput");
+    const bagSheet = document.getElementById("bagSheet");
+    const bagForm = document.getElementById("bagForm");
+    const bagInput = document.getElementById("bagInput");
+    const reminderBell = document.getElementById("reminderBell");
+    const reminderSheet = document.getElementById("reminderSheet");
+    const reminderForm = document.getElementById("reminderForm");
+    const reminderDate = document.getElementById("reminderDate");
+    const reminderTime = document.getElementById("reminderTime");
+    const reminderLocation = document.getElementById("reminderLocation");
+    const reminderBanner = document.getElementById("reminderBanner");
+    const reminderMessage = document.getElementById("reminderMessage");
+    const reminderCheck = document.getElementById("reminderCheck");
+    const reminderManageSheet = document.getElementById("reminderManageSheet");
+    const disableReminder = document.getElementById("disableReminder");
+    const resetReminder = document.getElementById("resetReminder");
+
+    const labelMap = {
+      "backpack": "Beg Sandang",
+      "handbag": "Beg Tangan",
+      "suitcase": "Beg Bagasi",
+      "cell phone": "Telefon",
+      "laptop": "Laptop",
+      "keyboard": "Keyboard",
+      "mouse": "Mouse",
+      "remote": "Remote Control",
+      "book": "Buku",
+      "bottle": "Botol",
+      "cup": "Cawan",
+      "scissors": "Gunting",
+      "toothbrush": "Berus Gigi",
+      "hair drier": "Pengering Rambut",
+      "tie": "Tali Leher",
+      "umbrella": "Payung",
+      "sports ball": "Bola",
+      "teddy bear": "Teddy Bear",
+      "detected item": "No item"
+    };
+
+    const ignoredClasses = new Set(["person"]);
+    const tripStorageKey = "justsnapTripHistory";
+    const learnedStorageKey = "justsnapLearnedItems";
+    const currentTrip = {
+      id: Date.now(),
+      items: new Set()
+    };
+
+    const recentItems = [];
+
+    function titleCaseBag(bag) {
+      return bag.replace(/\b\w/g, letter => letter.toUpperCase());
+    }
+
+    function escapeHtml(value) {
+      return String(value || "").replace(/[&<>"']/g, character => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        "\"": "&quot;",
+        "'": "&#039;"
+      }[character]));
+    }
+
+    function formatDetectedName(name) {
+      if (String(name || "").startsWith("learned:")) {
+        return String(name).slice(8);
+      }
+      return labelMap[name] || name.replace(/\b\w/g, letter => letter.toUpperCase());
+    }
+
+    function updateDetectedName(name) {
+      lastDetectedName = name;
+      currentName = name;
+      trackingName.textContent = name;
+    }
+
+    function normalizeItemName(name) {
+      return String(name || "").trim().toLowerCase();
+    }
+
+    function getStoredList(key) {
+      try {
+        return JSON.parse(localStorage.getItem(key) || "[]");
+      } catch (error) {
+        return [];
+      }
+    }
+
+    function setStoredList(key, value) {
+      localStorage.setItem(key, JSON.stringify(value.slice(-30)));
+    }
+
+    function setStoredMemory(value) {
+      localStorage.setItem(visualMemoryKey, JSON.stringify(value.slice(-70)));
+    }
+
+    function hasSeenOnboarding() {
+      try {
+        return localStorage.getItem(onboardingStorageKey) === "true";
+      } catch (error) {
+        return false;
+      }
+    }
+
+    function markOnboardingSeen() {
+      try {
+        localStorage.setItem(onboardingStorageKey, "true");
+      } catch (error) {
+        return;
+      }
+    }
+
+    function learnItemName(name) {
+      const normalized = normalizeItemName(name);
+      if (!normalized || normalized === "no item") return;
+      const learned = getStoredList(learnedStorageKey);
+      const existing = learned.find(item => item.name === name);
+      if (existing) {
+        existing.count += 1;
+      } else {
+        learned.push({ name, count: 1 });
+      }
+      setStoredList(learnedStorageKey, learned);
+    }
+
+    function getPredictionCropBox(prediction) {
+      if (cameraFeed.readyState < 2 || !cameraFeed.videoWidth || !cameraFeed.videoHeight) return null;
+      let sx = cameraFeed.videoWidth * .2;
+      let sy = cameraFeed.videoHeight * .18;
+      let sw = cameraFeed.videoWidth * .6;
+      let sh = cameraFeed.videoHeight * .62;
+
+      if (prediction?.bbox) {
+        const [x, y, width, height] = prediction.bbox;
+        const pad = Math.max(width, height) * .28;
+        sx = Math.max(0, x - pad);
+        sy = Math.max(0, y - pad);
+        sw = Math.min(cameraFeed.videoWidth - sx, width + pad * 2);
+        sh = Math.min(cameraFeed.videoHeight - sy, height + pad * 2);
+      }
+
+      return { sx, sy, sw, sh };
+    }
+
+    function createVisualSignature(prediction = currentBestPrediction) {
+      const box = getPredictionCropBox(prediction);
+      if (!box) return null;
+
+      const size = 12;
+      const canvas = document.createElement("canvas");
+      const context = canvas.getContext("2d", { willReadFrequently: true });
+      canvas.width = size;
+      canvas.height = size;
+      context.drawImage(cameraFeed, box.sx, box.sy, box.sw, box.sh, 0, 0, size, size);
+      const data = context.getImageData(0, 0, size, size).data;
+      const pixels = [];
+      let red = 0;
+      let green = 0;
+      let blue = 0;
+      let skinCount = 0;
+      let edgeCount = 0;
+
+      for (let i = 0; i < data.length; i += 4) {
+        const r = data[i];
+        const g = data[i + 1];
+        const b = data[i + 2];
+        red += r;
+        green += g;
+        blue += b;
+        if (r > 95 && g > 45 && b > 25 && r > g * 1.12 && r > b * 1.2 && Math.abs(r - g) > 16) skinCount += 1;
+        pixels.push(Math.round((r * .299 + g * .587 + b * .114) / 16));
+      }
+
+      for (let y = 0; y < size - 1; y += 1) {
+        for (let x = 0; x < size - 1; x += 1) {
+          const index = y * size + x;
+          if (Math.abs(pixels[index] - pixels[index + 1]) + Math.abs(pixels[index] - pixels[index + size]) > 4) {
+            edgeCount += 1;
+          }
+        }
+      }
+
+      const total = pixels.length;
+      return {
+        pixels,
+        color: [
+          Math.round(red / total / 16),
+          Math.round(green / total / 16),
+          Math.round(blue / total / 16)
+        ],
+        skinRatio: skinCount / total,
+        edgeRatio: edgeCount / ((size - 1) * (size - 1)),
+        aspect: Math.round((box.sw / Math.max(1, box.sh)) * 100) / 100
+      };
+    }
+
+    function visualDistance(first, second) {
+      if (!first?.pixels?.length || !second?.pixels?.length || first.pixels.length !== second.pixels.length) return Infinity;
+      if ((first.skinRatio || 0) > .32 || (second.skinRatio || 0) > .32) return Infinity;
+      if ((first.edgeRatio || 0) < .09 || (second.edgeRatio || 0) < .09) return Infinity;
+      let pixelTotal = 0;
+      for (let i = 0; i < first.pixels.length; i += 1) {
+        pixelTotal += Math.abs(first.pixels[i] - second.pixels[i]) / 16;
+      }
+
+      let colorTotal = 0;
+      for (let i = 0; i < 3; i += 1) {
+        colorTotal += Math.abs((first.color?.[i] || 0) - (second.color?.[i] || 0)) / 16;
+      }
+
+      const aspectDiff = Math.min(1, Math.abs((first.aspect || 1) - (second.aspect || 1)) / 2);
+      return pixelTotal / first.pixels.length * .72 + colorTotal / 3 * .2 + aspectDiff * .08;
+    }
+
+    function learnVisualItem(name, signature = currentSnapSignature) {
+      const normalized = normalizeItemName(name);
+      if (!signature || !normalized || normalized === "no item") return;
+      if ((signature.skinRatio || 0) > .28 || (signature.edgeRatio || 0) < .08) return;
+
+      const memory = getStoredList(visualMemoryKey);
+      const nearest = memory
+        .map(item => ({ item, distance: visualDistance(signature, item.signature) }))
+        .sort((a, b) => a.distance - b.distance)[0];
+
+      if (nearest && nearest.distance < .08) {
+        nearest.item.name = name;
+        nearest.item.signature = signature;
+        nearest.item.count = (nearest.item.count || 1) + 1;
+        nearest.item.updatedAt = Date.now();
+      } else {
+        memory.push({ name, signature, count: 1, updatedAt: Date.now() });
+      }
+
+      setStoredMemory(memory);
+    }
+
+    function matchLearnedVisual(signature) {
+      if (!signature) return null;
+      if ((signature.skinRatio || 0) > .28 || (signature.edgeRatio || 0) < .09) return null;
+      const match = getStoredList(visualMemoryKey)
+        .filter(item => typeof item.signature?.skinRatio === "number" && typeof item.signature?.edgeRatio === "number")
+        .map(item => ({ item, distance: visualDistance(signature, item.signature) }))
+        .filter(result => normalizeItemName(result.item.name) !== "no item")
+        .sort((a, b) => a.distance - b.distance)[0];
+
+      if (!match || match.distance > .075) return null;
+      return {
+        name: match.item.name,
+        confidence: Math.max(.62, 1 - match.distance * 3.3)
+      };
+    }
+
+    function cleanOldVisualMemory() {
+      const memory = getStoredList(visualMemoryKey);
+      const cleaned = memory.filter(item =>
+        normalizeItemName(item.name) !== "no item" &&
+        typeof item.signature?.skinRatio === "number" &&
+        typeof item.signature?.edgeRatio === "number" &&
+        (item.signature.skinRatio || 0) <= .28 &&
+        (item.signature.edgeRatio || 0) >= .08
+      );
+      if (cleaned.length !== memory.length) {
+        setStoredMemory(cleaned);
+      }
+    }
+
+    function getTopLearnedItem() {
+      return getStoredList(learnedStorageKey)
+        .sort((a, b) => (b.count || 0) - (a.count || 0))[0]?.name || "";
+    }
+
+    function recordTripItem(name) {
+      const normalized = normalizeItemName(name);
+      if (!normalized || normalized === "no item") return;
+      currentTrip.items.add(name);
+      learnItemName(name);
+      saveTripSnapshot();
+      checkHabitReminder();
+    }
+
+    function saveTripSnapshot() {
+      if (!currentTrip.items.size) return;
+      const history = getStoredList(tripStorageKey).filter(trip => trip.id !== currentTrip.id);
+      history.push({
+        id: currentTrip.id,
+        date: new Date().toISOString(),
+        items: [...currentTrip.items]
+      });
+      setStoredList(tripStorageKey, history);
+    }
+
+    function getFrequentMissingItem() {
+      const history = getStoredList(tripStorageKey);
+      const counts = new Map();
+      history.forEach(trip => {
+        new Set(trip.items || []).forEach(item => {
+          counts.set(item, (counts.get(item) || 0) + 1);
+        });
+      });
+
+      return [...counts.entries()]
+        .filter(([item, count]) => count >= 2 && !currentTrip.items.has(item))
+        .sort((a, b) => b[1] - a[1])[0]?.[0] || "";
+    }
+
+    function checkHabitReminder() {
+      if (habitReminderShown || !currentTrip.items.size) return;
+      const missing = getFrequentMissingItem();
+      if (!missing) return;
+      habitReminderShown = true;
+      sendReminderNotification(`${missing} tak bawak? Saya lihat awak selalu bawa ${missing} pada setiap trip.`);
+    }
+
+    window.addEventListener("beforeunload", saveTripSnapshot);
+
+    function openNameEditor({ mode = "rename" } = {}) {
+      const isManual = mode === "manual";
+      const suggestedName = getTopLearnedItem();
+      editTitle.textContent = isManual ? "Item Tidak Dikesan" : "Tukar Nama Item";
+      editNote.classList.remove("visible");
+      nameInput.placeholder = isManual && suggestedName ? `Contoh: ${suggestedName}` : isManual ? "Masukkan nama item secara manual" : "";
+      nameInput.value = isManual ? "" : currentName;
+      editSheet.classList.add("open");
+      nameInput.focus();
+      if (!isManual) {
+        nameInput.select();
+      }
+    }
+
+    function playScannerBeep() {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass) {
+        playFallbackBeep();
+        return;
+      }
+
+      try {
+        audioContext = audioContext || new AudioContextClass();
+        if (audioContext.state === "suspended") {
+          audioContext.resume();
+        }
+
+        const now = audioContext.currentTime;
+        const gain = audioContext.createGain();
+        gain.gain.setValueAtTime(0.0001, now);
+        gain.gain.exponentialRampToValueAtTime(0.22, now + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.16);
+        gain.connect(audioContext.destination);
+
+        [1040, 1560].forEach((frequency, index) => {
+          const oscillator = audioContext.createOscillator();
+          oscillator.type = "square";
+          oscillator.frequency.setValueAtTime(frequency, now + index * 0.055);
+          oscillator.connect(gain);
+          oscillator.start(now + index * 0.055);
+          oscillator.stop(now + index * 0.055 + 0.08);
+        });
+      } catch (error) {
+        playFallbackBeep();
+      }
+    }
+
+    function playFallbackBeep() {
+      const sampleRate = 8000;
+      const duration = .16;
+      const sampleCount = Math.floor(sampleRate * duration);
+      const bytes = new Uint8Array(44 + sampleCount * 2);
+      const view = new DataView(bytes.buffer);
+
+      function writeText(offset, text) {
+        for (let index = 0; index < text.length; index += 1) {
+          bytes[offset + index] = text.charCodeAt(index);
+        }
+      }
+
+      writeText(0, "RIFF");
+      view.setUint32(4, 36 + sampleCount * 2, true);
+      writeText(8, "WAVEfmt ");
+      view.setUint32(16, 16, true);
+      view.setUint16(20, 1, true);
+      view.setUint16(22, 1, true);
+      view.setUint32(24, sampleRate, true);
+      view.setUint32(28, sampleRate * 2, true);
+      view.setUint16(32, 2, true);
+      view.setUint16(34, 16, true);
+      writeText(36, "data");
+      view.setUint32(40, sampleCount * 2, true);
+
+      for (let index = 0; index < sampleCount; index += 1) {
+        const time = index / sampleRate;
+        const frequency = time < .08 ? 1040 : 1560;
+        const envelope = Math.max(0, 1 - time / duration);
+        const sample = Math.sign(Math.sin(2 * Math.PI * frequency * time)) * 0.32 * envelope;
+        view.setInt16(44 + index * 2, sample * 32767, true);
+      }
+
+      let binary = "";
+      bytes.forEach(byte => {
+        binary += String.fromCharCode(byte);
+      });
+      new Audio(`data:audio/wav;base64,${btoa(binary)}`).play().catch(() => {});
+    }
+
+    function setDefaultReminderDateTime() {
+      const target = new Date(Date.now() + 30 * 60 * 1000);
+      const year = target.getFullYear();
+      const month = String(target.getMonth() + 1).padStart(2, "0");
+      const day = String(target.getDate()).padStart(2, "0");
+      const hours = String(target.getHours()).padStart(2, "0");
+      const minutes = String(target.getMinutes()).padStart(2, "0");
+      reminderDate.value = `${year}-${month}-${day}`;
+      reminderTime.value = `${hours}:${minutes}`;
+    }
+
+    function getCurrentPosition() {
+      return new Promise(resolve => {
+        if (!navigator.geolocation) {
+          resolve(null);
+          return;
+        }
+
+        navigator.geolocation.getCurrentPosition(
+          position => resolve({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          }),
+          () => resolve(null),
+          { enableHighAccuracy: true, timeout: 7000, maximumAge: 15000 }
+        );
+      });
+    }
+
+    function distanceInMeters(a, b) {
+      if (!a || !b) return 0;
+      const earthRadius = 6371000;
+      const lat1 = a.lat * Math.PI / 180;
+      const lat2 = b.lat * Math.PI / 180;
+      const deltaLat = (b.lat - a.lat) * Math.PI / 180;
+      const deltaLng = (b.lng - a.lng) * Math.PI / 180;
+      const haversine = Math.sin(deltaLat / 2) ** 2 +
+        Math.cos(lat1) * Math.cos(lat2) * Math.sin(deltaLng / 2) ** 2;
+      return earthRadius * 2 * Math.atan2(Math.sqrt(haversine), Math.sqrt(1 - haversine));
+    }
+
+    function sendReminderNotification(message) {
+      reminderMessage.textContent = message;
+      reminderBanner.classList.add("visible");
+
+      if ("Notification" in window && Notification.permission === "granted") {
+        new Notification("JustSnap", { body: message });
+      }
+    }
+
+    async function checkReminderStatus() {
+      if (!reminderConfig) return;
+
+      const now = Date.now();
+      const targetTime = reminderConfig.target.getTime();
+      const minutesToTarget = (targetTime - now) / 60000;
+      const currentPosition = await getCurrentPosition();
+      const distance = distanceInMeters(reminderConfig.position, currentPosition);
+
+      if (!reminderFired.far && minutesToTarget <= 15 && minutesToTarget > 0 && distance > 50) {
+        reminderFired.far = true;
+        sendReminderNotification("Dah balik ke? Check item dulu sebelum terlepas.");
+      }
+
+      if (!reminderFired.exact && now >= targetTime) {
+        reminderFired.exact = true;
+        sendReminderNotification("Dah nak checkout, jom check item.");
+      }
+    }
+
+    function activateReminder(config) {
+      reminderConfig = config;
+      reminderFired = { far: false, exact: false };
+      reminderBell.classList.add("active");
+      reminderBell.setAttribute("aria-label", "Reminder checkout aktif");
+      window.clearInterval(reminderTimer);
+      reminderTimer = window.setInterval(checkReminderStatus, 10000);
+      checkReminderStatus();
+    }
+
+    function deactivateReminder() {
+      reminderConfig = null;
+      reminderFired = { far: false, exact: false };
+      window.clearInterval(reminderTimer);
+      reminderBell.classList.remove("active");
+      reminderBell.setAttribute("aria-label", "Aktifkan reminder checkout");
+      reminderBanner.classList.remove("visible");
+    }
+
+    function setToast(name, bag) {
+      currentName = name;
+      trackingName.textContent = name;
+      toastTitle.textContent = name;
+      toastSubtitle.textContent = `Stored at ${bag}`;
+      toastDot.innerHTML = currentSnapImage ? `<img src="${currentSnapImage}" alt="">` : "";
+      toast.classList.add("visible");
+      window.clearTimeout(toastTimer);
+      toastTimer = window.setTimeout(() => toast.classList.remove("visible"), 6500);
+    }
+
+    function renderRecent() {
+      recentList.innerHTML = recentItems.slice(0, 4).map(item => `
+        <li class="recent-item">
+          <span class="item-dot" aria-hidden="true">${item.image ? `<img src="${item.image}" alt="">` : ""}</span>
+          <span>
+            <span class="recent-name">${escapeHtml(item.name)}</span>
+            <span class="recent-location">Stored at ${escapeHtml(item.bag)}</span>
+          </span>
+        </li>
+      `).join("");
+    }
+
+    function displayBagName(name) {
+      return titleCaseBag(name);
+    }
+
+    function getAllBagNames() {
+      const fromItems = recentItems.map(item => item.bag);
+      return [...new Set([...bagNames, ...fromItems])];
+    }
+
+    function renderManageTabs() {
+      const tabs = ["all", ...getAllBagNames()];
+      manageTabs.innerHTML = tabs.map(bag => `
+        <button class="manage-tab ${bag === manageActiveBag ? "active" : ""}" type="button" data-bag="${escapeHtml(bag)}">
+          ${escapeHtml(bag === "all" ? "All" : displayBagName(bag))}
+        </button>
+      `).join("") + `
+        <button class="manage-add-tab" type="button" id="manageAddBag" aria-label="Tambah kategori beg">
+          <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
+            <path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="3.3" stroke-linecap="round"/>
+          </svg>
+        </button>
+      `;
+    }
+
+    function renderManage() {
+      renderManageTabs();
+      const visibleBags = manageActiveBag === "all" ? getAllBagNames() : getAllBagNames().filter(bag => bag === manageActiveBag);
+      manageContent.innerHTML = visibleBags.map((bag, index) => {
+        const items = recentItems.filter(item => item.bag === bag);
+        const bellActive = index === 0 && reminderConfig;
+        const rows = items.length ? items.map(item => `
+          <li class="manage-item" data-id="${item.id}">
+            <span class="item-dot" aria-hidden="true">${item.image ? `<img src="${item.image}" alt="">` : ""}</span>
+            <span>
+              <span class="recent-name">${escapeHtml(item.name)}</span>
+              <span class="recent-location">Stored at ${escapeHtml(item.bag)}</span>
+            </span>
+            <button class="delete-item" type="button" data-id="${item.id}" aria-label="Padam ${escapeHtml(item.name)}">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M6 6 18 18M18 6 6 18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+              </svg>
+            </button>
+          </li>
+        `).join("") : `<li class="empty-manage">Belum ada item dalam ${escapeHtml(displayBagName(bag))}.</li>`;
+
+        return `
+          <section class="manage-card" data-bag-section="${escapeHtml(bag)}">
+            <div class="manage-card-header">
+              <h2 class="manage-card-title">${escapeHtml(displayBagName(bag))}</h2>
+              <span class="bell ${bellActive ? "active" : ""}" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  <path d="M17 9a5 5 0 0 0-10 0v3.3c0 .7-.3 1.3-.8 1.8L5 15.3V17h14v-1.7l-1.2-1.2a2.5 2.5 0 0 1-.8-1.8V9Z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/>
+                  <path d="M9.5 19a2.7 2.7 0 0 0 5 0M4 9.4C4 7 5.1 4.9 6.9 3.5M20 9.4c0-2.4-1.1-4.5-2.9-5.9" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+                </svg>
+              </span>
+            </div>
+            <ul class="manage-list">${rows}</ul>
+          </section>
+        `;
+      }).join("");
+    }
+
+    function renderChecklist() {
+      updateChecklistProgress();
+      const bagsWithItems = getAllBagNames()
+        .map(bag => ({
+          bag,
+          items: recentItems.filter(item => item.bag === bag)
+        }))
+        .filter(group => group.items.length);
+
+      if (!bagsWithItems.length) {
+        checklistContent.innerHTML = `
+          <section class="checklist-group">
+            <h2 class="checklist-title">Checklist</h2>
+            <ul class="checklist-list">
+              <li class="empty-manage">Belum ada barang untuk disemak.</li>
+            </ul>
+          </section>
+        `;
+        return;
+      }
+
+      checklistContent.innerHTML = bagsWithItems.map(group => `
+        <section class="checklist-group">
+          <h2 class="checklist-title">${escapeHtml(displayBagName(group.bag))}</h2>
+          <ul class="checklist-list">
+            ${group.items.map(item => `
+              <li class="checklist-item">
+                <label class="checklist-box" aria-label="Tanda ${escapeHtml(item.name)} sudah disemak">
+                  <input type="checkbox" data-id="${item.id}" ${checkedItems.has(item.id) ? "checked" : ""}>
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="m5 12.5 4.2 4.1L19 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </label>
+                <span class="item-dot" aria-hidden="true">${item.image ? `<img src="${item.image}" alt="">` : ""}</span>
+                <span>
+                  <span class="recent-name">${escapeHtml(item.name)}</span>
+                  <span class="recent-location">Stored at ${escapeHtml(item.bag)}</span>
+                </span>
+              </li>
+            `).join("")}
+          </ul>
+        </section>
+      `).join("");
+    }
+
+    function updateChecklistProgress() {
+      const total = recentItems.length;
+      const checked = recentItems.filter(item => checkedItems.has(item.id)).length;
+      const percent = total ? Math.round((checked / total) * 100) : 0;
+      checklistProgress.style.width = `${percent}%`;
+    }
+
+    function formatHistoryDate(dateValue, includeTime = true) {
+      const date = new Date(dateValue);
+      if (Number.isNaN(date.getTime())) return "No date";
+      const dateText = date.toLocaleDateString("ms-MY", {
+        day: "numeric",
+        month: "long",
+        year: "numeric"
+      });
+      if (!includeTime) return dateText;
+      const timeText = date.toLocaleTimeString("ms-MY", {
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true
+      }).replace("PG", "PG").replace("PTG", "PTG");
+      return `${dateText}, ${timeText}`;
+    }
+
+    function renderHistory() {
+      const history = getStoredList(checkoutHistoryKey).slice().reverse();
+      if (!history.length) {
+        historyContent.innerHTML = `<p class="empty-manage">Belum ada rekod checkout.</p>`;
+        return;
+      }
+
+      historyContent.innerHTML = history.map(entry => {
+        const items = entry.items || [];
+        const checkedCount = items.filter(item => item.checked).length;
+        const total = items.length;
+        return `
+          <article class="history-card">
+            <h2 class="history-time">${escapeHtml(formatHistoryDate(entry.date))}</h2>
+            <div class="history-ratio">${checkedCount}/${total}</div>
+            <p class="history-meta">
+              Date out: ${escapeHtml(formatHistoryDate(entry.date, false))}<br>
+              Location: ${escapeHtml(entry.location || "No Location saved")}
+            </p>
+            <ul class="history-list">
+              ${items.map(item => `
+                <li class="history-item">
+                  <span class="item-dot" aria-hidden="true">${item.image ? `<img src="${item.image}" alt="">` : ""}</span>
+                  <span>
+                    <span class="recent-name">${escapeHtml(item.name)}</span>
+                    <span class="recent-location">Stored at ${escapeHtml(item.bag)} <span class="history-status ${item.checked ? "checked" : "unchecked"}">• ${item.checked ? "Checked" : "Unchecked"}</span></span>
+                  </span>
+                </li>
+              `).join("")}
+            </ul>
+          </article>
+        `;
+      }).join("");
+    }
+
+    function renderAboutSlide() {
+      const slide = aboutSlides[aboutSlideIndex];
+      aboutScreen.style.backgroundImage = `url("${slide.background}")`;
+      aboutScreen.classList.toggle("light-controls", slide.light);
+      aboutTitle.textContent = slide.title;
+      aboutTitle.classList.toggle("centered", slide.centered);
+      aboutTitle.style.display = slide.hideText ? "none" : "block";
+      aboutCopy.textContent = slide.copy;
+      aboutCopy.style.display = slide.hideText ? "none" : "block";
+      aboutNext.textContent = slide.button;
+      aboutLogo.style.display = slide.logo ? "block" : "none";
+      aboutPanel.style.display = slide.panel ? "block" : "none";
+      aboutPanel.setAttribute("aria-hidden", slide.panel ? "false" : "true");
+      aboutDots.innerHTML = aboutSlides.map((_, index) => (
+        `<span class="about-dot${index === aboutSlideIndex ? " active" : ""}" aria-hidden="true"></span>`
+      )).join("");
+    }
+
+    function renderHome() {
+      const copy = homeCopy[homeLanguage];
+      homeTitle.textContent = copy.title;
+      homeStart.textContent = copy.button;
+      languageToggle.textContent = homeLanguage;
+      sponsoredTitle.textContent = copy.sponsored;
+      learnMore.textContent = copy.learn;
+    }
+
+    function showHomeScreen() {
+      app.classList.remove("manage-mode");
+      app.classList.remove("checklist-mode");
+      app.classList.remove("history-mode");
+      app.classList.remove("about-mode");
+      app.classList.add("home-mode");
+      renderHome();
+    }
+
+    function showManageScreen() {
+      app.classList.remove("checklist-mode");
+      app.classList.remove("history-mode");
+      app.classList.remove("about-mode");
+      app.classList.remove("home-mode");
+      app.classList.add("manage-mode");
+      renderManage();
+    }
+
+    function showChecklistScreen() {
+      app.classList.remove("manage-mode");
+      app.classList.remove("history-mode");
+      app.classList.remove("about-mode");
+      app.classList.remove("home-mode");
+      app.classList.add("checklist-mode");
+      renderChecklist();
+    }
+
+    function showHistoryScreen() {
+      app.classList.remove("manage-mode");
+      app.classList.remove("checklist-mode");
+      app.classList.remove("about-mode");
+      app.classList.remove("home-mode");
+      app.classList.add("history-mode");
+      renderHistory();
+    }
+
+    function showAboutScreen() {
+      app.classList.remove("manage-mode");
+      app.classList.remove("checklist-mode");
+      app.classList.remove("history-mode");
+      app.classList.remove("home-mode");
+      app.classList.add("about-mode");
+      renderAboutSlide();
+    }
+
+    function showScanScreen() {
+      app.classList.remove("manage-mode");
+      app.classList.remove("checklist-mode");
+      app.classList.remove("history-mode");
+      app.classList.remove("about-mode");
+      app.classList.remove("home-mode");
+      startCamera();
+    }
+
+    function handleConfirmCheckout() {
+      const uncheckedCount = recentItems.filter(item => !checkedItems.has(item.id)).length;
+      if (uncheckedCount > 0) {
+        checkoutWarningText.textContent = `Anda mempunyai ${uncheckedCount} barang yang belum disemak. Pastikan tiada item tertinggal sebelum checkout.`;
+        checkoutWarningSheet.classList.add("open");
+        window.clearTimeout(checkoutWarningTimer);
+        checkoutWarningTimer = window.setTimeout(() => {
+          checkoutWarningSheet.classList.remove("open");
+        }, 7000);
+        return;
+      }
+
+      const history = getStoredList(checkoutHistoryKey);
+      recentItems.forEach(item => learnVisualItem(item.name, item.signature));
+      history.push({
+        date: new Date().toISOString(),
+        location: reminderConfig?.label || "No Location saved",
+        items: recentItems.map(item => ({
+          ...item,
+          checked: checkedItems.has(item.id)
+        }))
+      });
+      setStoredList(checkoutHistoryKey, history);
+      recentItems.splice(0, recentItems.length);
+      checkedItems.clear();
+      renderRecent();
+      renderManage();
+      renderChecklist();
+      renderHistory();
+      updateDetectedName("No item");
+      toast.classList.remove("visible");
+    }
+
+    function updateItemBag(id, bag) {
+      const item = recentItems.find(entry => entry.id === id);
+      if (!item || !bag || item.bag === bag) return;
+      item.bag = bag;
+      manageActiveBag = bag;
+      renderRecent();
+      renderManage();
+      renderChecklist();
+      setToast(item.name, bag);
+    }
+
+    function getDropBagFromPoint(x, y) {
+      const element = document.elementFromPoint(x, y);
+      const tab = element?.closest?.(".manage-tab");
+      if (tab && tab.dataset.bag !== "all") return tab.dataset.bag;
+      const card = element?.closest?.("[data-bag-section]");
+      return card?.dataset.bagSection || "";
+    }
+
+    function clearDropTargets() {
+      document.querySelectorAll(".drop-target").forEach(element => element.classList.remove("drop-target"));
+    }
+
+    function markDropTarget(bag) {
+      clearDropTargets();
+      if (!bag) return;
+      document.querySelectorAll(".manage-tab, [data-bag-section]").forEach(element => {
+        if (element.dataset.bag === bag || element.dataset.bagSection === bag) {
+          element.classList.add("drop-target");
+        }
+      });
+    }
+
+    function moveDragGhost(x, y) {
+      if (!dragState?.ghost) return;
+      dragState.ghost.style.transform = `translate(${x - 22}px, ${y - 22}px)`;
+    }
+
+    function startManageDrag(row, item, event) {
+      navigator.vibrate?.(45);
+      const ghost = document.createElement("div");
+      ghost.className = "drag-ghost";
+      ghost.innerHTML = `
+        <span class="item-dot" aria-hidden="true">${item.image ? `<img src="${item.image}" alt="">` : ""}</span>
+        <span>${escapeHtml(item.name)}</span>
+      `;
+      document.body.appendChild(ghost);
+      row.classList.add("drag-source");
+      dragState = {
+        id: item.id,
+        row,
+        ghost,
+        active: true
+      };
+      moveDragGhost(event.clientX, event.clientY);
+    }
+
+    function endManageDrag(event) {
+      if (!dragState) return;
+      window.clearTimeout(dragState.timer);
+      const active = dragState.active;
+      const id = dragState.id;
+      dragState.row?.classList.remove("drag-source");
+      dragState.ghost?.remove();
+      clearDropTargets();
+      dragState = null;
+
+      if (active) {
+        const bag = getDropBagFromPoint(event.clientX, event.clientY);
+        if (bag) {
+          updateItemBag(id, bag);
+        }
+      }
+    }
+
+    function captureCurrentItem() {
+      if (cameraFeed.readyState < 2 || !cameraFeed.videoWidth || !cameraFeed.videoHeight) {
+        return "";
+      }
+
+      const canvas = document.createElement("canvas");
+      const size = 180;
+      const context = canvas.getContext("2d");
+      canvas.width = size;
+      canvas.height = size;
+
+      const box = getPredictionCropBox(currentBestPrediction);
+      if (!box) return "";
+
+      context.drawImage(cameraFeed, box.sx, box.sy, box.sw, box.sh, 0, 0, size, size);
+      return canvas.toDataURL("image/jpeg", .76);
+    }
+
+    function snapItem() {
+      playScannerBeep();
+
+      const detectedName = lastDetectedName && !["Scanning...", "No item"].includes(lastDetectedName) ? lastDetectedName : "";
+      if (!detectedName) {
+        const manualName = "No item";
+        currentSnapImage = captureCurrentItem();
+        currentSnapSignature = createVisualSignature(currentBestPrediction);
+        snapCount += 1;
+        recentItems.unshift({ id: itemIdCounter++, name: manualName, bag: selectedBag, image: currentSnapImage, signature: currentSnapSignature });
+        renderRecent();
+        renderManage();
+        renderChecklist();
+        setToast(manualName, selectedBag);
+        openNameEditor({ mode: "manual" });
+        return;
+      }
+
+      const name = detectedName;
+      currentSnapImage = captureCurrentItem();
+      currentSnapSignature = createVisualSignature(currentBestPrediction);
+      snapCount += 1;
+      recentItems.unshift({ id: itemIdCounter++, name, bag: selectedBag, image: currentSnapImage, signature: currentSnapSignature });
+      renderRecent();
+      renderManage();
+      renderChecklist();
+      setToast(name, selectedBag);
+      recordTripItem(name);
+      learnVisualItem(name, currentSnapSignature);
+    }
+
+    function syncDetectionCanvas() {
+      const ratio = window.devicePixelRatio || 1;
+      const width = Math.round(viewfinder.clientWidth * ratio);
+      const height = Math.round(viewfinder.clientHeight * ratio);
+      if (detectionLayer.width !== width || detectionLayer.height !== height) {
+        detectionLayer.width = width;
+        detectionLayer.height = height;
+      }
+    }
+
+    function mapVideoBoxToCanvas(box) {
+      const videoWidth = cameraFeed.videoWidth || detectionLayer.width;
+      const videoHeight = cameraFeed.videoHeight || detectionLayer.height;
+      const scale = Math.max(detectionLayer.width / videoWidth, detectionLayer.height / videoHeight);
+      const offsetX = (detectionLayer.width - videoWidth * scale) / 2;
+      const offsetY = (detectionLayer.height - videoHeight * scale) / 2;
+      return [
+        box[0] * scale + offsetX,
+        box[1] * scale + offsetY,
+        box[2] * scale,
+        box[3] * scale
+      ];
+    }
+
+    function mapCanvasPointToVideo(point) {
+      const videoWidth = cameraFeed.videoWidth || detectionLayer.width;
+      const videoHeight = cameraFeed.videoHeight || detectionLayer.height;
+      const scale = Math.max(detectionLayer.width / videoWidth, detectionLayer.height / videoHeight);
+      const offsetX = (detectionLayer.width - videoWidth * scale) / 2;
+      const offsetY = (detectionLayer.height - videoHeight * scale) / 2;
+      return {
+        x: Math.min(videoWidth, Math.max(0, (point.x - offsetX) / scale)),
+        y: Math.min(videoHeight, Math.max(0, (point.y - offsetY) / scale))
+      };
+    }
+
+    function drawFocusReticle() {
+      if (!focusPoint) return;
+      const [x, y] = mapVideoBoxToCanvas([focusPoint.x, focusPoint.y, 1, 1]);
+      detectionContext.strokeStyle = "#ffffff";
+      detectionContext.lineWidth = Math.max(3, detectionLayer.width * .004);
+      detectionContext.beginPath();
+      detectionContext.arc(x, y, 22, 0, Math.PI * 2);
+      detectionContext.moveTo(x - 32, y);
+      detectionContext.lineTo(x - 12, y);
+      detectionContext.moveTo(x + 12, y);
+      detectionContext.lineTo(x + 32, y);
+      detectionContext.moveTo(x, y - 32);
+      detectionContext.lineTo(x, y - 12);
+      detectionContext.moveTo(x, y + 12);
+      detectionContext.lineTo(x, y + 32);
+      detectionContext.stroke();
+    }
+
+    function drawDetection(prediction) {
+      syncDetectionCanvas();
+      detectionContext.clearRect(0, 0, detectionLayer.width, detectionLayer.height);
+      if (!prediction) {
+        drawFocusReticle();
+        return;
+      }
+
+      const [x, y, width, height] = mapVideoBoxToCanvas(prediction.bbox);
+      const name = formatDetectedName(prediction.class);
+      detectionContext.lineWidth = Math.max(4, detectionLayer.width * .006);
+      detectionContext.strokeStyle = "#02a83b";
+      detectionContext.fillStyle = "rgba(2, 168, 59, .18)";
+      detectionContext.strokeRect(x, y, width, height);
+      detectionContext.fillRect(x, y, width, height);
+
+      detectionContext.font = `700 ${Math.max(18, detectionLayer.width * .042)}px system-ui, sans-serif`;
+      const label = `${name} ${Math.round(prediction.score * 100)}%`;
+      const textWidth = detectionContext.measureText(label).width;
+      const labelHeight = 34;
+      const labelY = Math.max(8, y - labelHeight - 8);
+      detectionContext.fillStyle = "#02a83b";
+      detectionContext.fillRect(x, labelY, textWidth + 20, labelHeight);
+      detectionContext.fillStyle = "#fff";
+      detectionContext.fillText(label, x + 10, labelY + 23);
+      drawFocusReticle();
+    }
+
+    function pointInsideBox(point, box) {
+      return point &&
+        point.x >= box[0] &&
+        point.x <= box[0] + box[2] &&
+        point.y >= box[1] &&
+        point.y <= box[1] + box[3];
+    }
+
+    function classifyFallbackObject(metrics) {
+      if (metrics.skinRatio > .34 && metrics.edgeRatio < .09) {
+        return "detected item";
+      }
+
+      if (metrics.averageLight > 145 && metrics.aspectRatio < .76 && metrics.edgeRatio > .035 && metrics.skinRatio < .28) {
+        return "remote";
+      }
+
+      if (metrics.warmRatio > .35 && metrics.skinRatio < .18 && metrics.averageLight < 160 && metrics.edgeRatio > .04) {
+        return "teddy bear";
+      }
+
+      return "detected item";
+    }
+
+    function analyzeShapeRegion(sx, sy, boxWidth, boxHeight, isFocusedAssist) {
+      const canvas = document.createElement("canvas");
+      const size = 96;
+      const context = canvas.getContext("2d", { willReadFrequently: true });
+      canvas.width = size;
+      canvas.height = size;
+      context.drawImage(cameraFeed, sx, sy, boxWidth, boxHeight, 0, 0, size, size);
+      const pixels = context.getImageData(0, 0, size, size).data;
+      let edgeCount = 0;
+      let warmCount = 0;
+      let skinCount = 0;
+      let lightSum = 0;
+      let minLight = 255;
+      let maxLight = 0;
+
+      for (let y = 1; y < size - 1; y += 2) {
+        for (let x = 1; x < size - 1; x += 2) {
+          const index = (y * size + x) * 4;
+          const right = (y * size + x + 1) * 4;
+          const down = ((y + 1) * size + x) * 4;
+          const red = pixels[index];
+          const green = pixels[index + 1];
+          const blue = pixels[index + 2];
+          const light = red * .299 + green * .587 + blue * .114;
+          const lightRight = pixels[right] * .299 + pixels[right + 1] * .587 + pixels[right + 2] * .114;
+          const lightDown = pixels[down] * .299 + pixels[down + 1] * .587 + pixels[down + 2] * .114;
+          lightSum += light;
+          minLight = Math.min(minLight, light);
+          maxLight = Math.max(maxLight, light);
+          if (red > green * 1.05 && green > blue * 1.05 && red > 82) warmCount += 1;
+          if (red > 95 && green > 45 && blue > 25 && red > green * 1.12 && red > blue * 1.2 && Math.abs(red - green) > 16) skinCount += 1;
+          if (Math.abs(light - lightRight) + Math.abs(light - lightDown) > 30) edgeCount += 1;
+        }
+      }
+
+      const sampled = (size / 2 - 1) * (size / 2 - 1);
+      const edgeRatio = edgeCount / sampled;
+      const contrast = maxLight - minLight;
+      const averageLight = lightSum / sampled;
+      const warmRatio = warmCount / sampled;
+      const skinRatio = skinCount / sampled;
+      if (!isFocusedAssist && (edgeRatio < .048 || contrast < 20)) return null;
+      if (isFocusedAssist && edgeRatio < .018 && contrast < 10) return null;
+      if (!isFocusedAssist && skinRatio > .24 && edgeRatio < .08) return null;
+      if (isFocusedAssist && skinRatio > .45 && edgeRatio < .07) return null;
+
+      return {
+        edgeRatio,
+        contrast,
+        averageLight,
+        warmRatio,
+        skinRatio,
+        aspectRatio: Math.min(boxWidth, boxHeight) / Math.max(boxWidth, boxHeight)
+      };
+    }
+
+    function detectShapeFallback(predictions) {
+      if (cameraFeed.readyState < 2 || !cameraFeed.videoWidth || !cameraFeed.videoHeight) return null;
+
+      const videoWidth = cameraFeed.videoWidth;
+      const videoHeight = cameraFeed.videoHeight;
+      const isFocusedAssist = Date.now() < focusAssistUntil;
+      const target = focusPoint || { x: videoWidth * .5, y: videoHeight * .5 };
+      const boxWidth = Math.min(videoWidth, videoHeight) * (isFocusedAssist ? .48 : .42);
+      const boxHeight = Math.min(videoWidth, videoHeight) * (isFocusedAssist ? .48 : .5);
+      const sx = Math.max(0, Math.min(videoWidth - boxWidth, target.x - boxWidth / 2));
+      const sy = Math.max(0, Math.min(videoHeight - boxHeight, target.y - boxHeight / 2));
+      const metrics = analyzeShapeRegion(sx, sy, boxWidth, boxHeight, isFocusedAssist);
+      if (!metrics) return null;
+
+      return {
+        bbox: [sx, sy, boxWidth, boxHeight],
+        class: classifyFallbackObject(metrics),
+        score: Math.min(.86, (isFocusedAssist ? .62 : .5) + metrics.edgeRatio + metrics.contrast / 520),
+        isShapeFallback: true
+      };
+    }
+
+    function chooseForegroundObject(predictions) {
+      const frameWidth = cameraFeed.videoWidth || detectionLayer.width || 1;
+      const frameHeight = cameraFeed.videoHeight || detectionLayer.height || 1;
+      const target = focusPoint || { x: frameWidth / 2, y: frameHeight / 2 };
+
+      if (focusPoint) {
+        const focusedBest = predictions
+          .filter(item => item.score >= .16 && !ignoredClasses.has(item.class))
+          .map(item => {
+            const [x, y, width, height] = item.bbox;
+            const padding = Math.max(width, height) * .18;
+            const expandedBox = [x - padding, y - padding, width + padding * 2, height + padding * 2];
+            const objectCenterX = x + width / 2;
+            const objectCenterY = y + height / 2;
+            const distance = Math.hypot((objectCenterX - target.x) / frameWidth, (objectCenterY - target.y) / frameHeight);
+            const centerScore = Math.max(0, 1 - distance * 2.4);
+            const focusHit = pointInsideBox(target, expandedBox) ? 1 : 0;
+            const areaRatio = Math.min(1, (width * height) / (frameWidth * frameHeight * .34));
+            const rank = item.score * .65 + centerScore * 1.2 + focusHit * 1.6 + areaRatio * .45;
+            return { ...item, rank };
+          })
+          .filter(item => item.rank > 1.05)
+          .sort((a, b) => b.rank - a.rank)[0];
+
+        if (focusedBest) return focusedBest;
+      }
+
+      const best = predictions
+        .filter(item => item.score >= (focusPoint ? .16 : .14) && !ignoredClasses.has(item.class))
+        .map(item => {
+          const [x, y, width, height] = item.bbox;
+          const objectCenterX = x + width / 2;
+          const objectCenterY = y + height / 2;
+          const areaRatio = Math.min(1, (width * height) / (frameWidth * frameHeight * .36));
+          const distance = Math.hypot((objectCenterX - target.x) / frameWidth, (objectCenterY - target.y) / frameHeight);
+          const centerScore = Math.max(0, 1 - distance * 1.55);
+          const lowerForegroundScore = objectCenterY / frameHeight;
+          const edgePenalty = x < frameWidth * .04 || y < frameHeight * .04 || x + width > frameWidth * .96 ? .18 : 0;
+          const tapBoost = focusPoint ? centerScore * .6 : 0;
+          const rank = item.score * .75 + areaRatio * .55 + centerScore * 1.05 + tapBoost + lowerForegroundScore * .1 - edgePenalty;
+          return { ...item, rank };
+        })
+        .filter(item => item.rank > (focusPoint ? .78 : .62))
+        .sort((a, b) => b.rank - a.rank)[0];
+
+      return best || detectShapeFallback(predictions);
+    }
+
+    function getSmoothedDetection(candidate) {
+      if (!candidate) {
+        detectionVotes = detectionVotes.slice(-4);
+        return null;
+      }
+
+      detectionVotes.push({
+        name: formatDetectedName(candidate.class),
+        prediction: candidate,
+        at: Date.now()
+      });
+      detectionVotes = detectionVotes.filter(vote => Date.now() - vote.at < 1600).slice(-6);
+
+      const counts = new Map();
+      detectionVotes.forEach(vote => counts.set(vote.name, (counts.get(vote.name) || 0) + 1));
+      const winner = [...counts.entries()].sort((a, b) => b[1] - a[1])[0];
+      if (!winner || winner[1] < 2) return candidate;
+      return [...detectionVotes].reverse().find(vote => vote.name === winner[0])?.prediction || candidate;
+    }
+
+    async function loadAiDetector() {
+      if (detectorModel) {
+        startDetectionLoop();
+        return;
+      }
+
+      if (!window.cocoSsd) {
+        trackingName.textContent = "Tap item untuk detect";
+        startDetectionLoop();
+        return;
+      }
+
+      trackingName.textContent = "Scanning...";
+      try {
+        detectorModel = await cocoSsd.load({
+          base: "lite_mobilenet_v2",
+          modelUrl: "vendor/coco-model/model.json"
+        });
+      } catch (error) {
+        detectorModel = null;
+        trackingName.textContent = "Tap item untuk detect";
+      }
+      startDetectionLoop();
+    }
+
+    async function detectFrame() {
+      if (cameraFeed.readyState < 2) {
+        window.requestAnimationFrame(detectFrame);
+        return;
+      }
+
+      try {
+        const predictions = detectorModel ? await detectorModel.detect(cameraFeed) : [];
+        const candidate = getSmoothedDetection(chooseForegroundObject(predictions));
+        let best = candidate && formatDetectedName(candidate.class) !== "No item" ? candidate : null;
+        const memorySignature = createVisualSignature(best || candidate || currentBestPrediction);
+        const learnedMatch = matchLearnedVisual(memorySignature);
+        if (learnedMatch && (!best || learnedMatch.confidence >= .74 || best.isShapeFallback)) {
+          best = {
+            bbox: (best || candidate || currentBestPrediction)?.bbox || [
+              (cameraFeed.videoWidth || 1) * .2,
+              (cameraFeed.videoHeight || 1) * .18,
+              (cameraFeed.videoWidth || 1) * .6,
+              (cameraFeed.videoHeight || 1) * .62
+            ],
+            class: `learned:${learnedMatch.name}`,
+            score: learnedMatch.confidence,
+            isLearnedMatch: true
+          };
+        }
+        currentBestPrediction = best || null;
+
+        drawDetection(best);
+
+        if (best) {
+          const name = formatDetectedName(best.class);
+          if (stableDetection.name === name) {
+            stableDetection.count += 1;
+          } else {
+            stableDetection = { name, count: 1 };
+          }
+
+          if (stableDetection.count >= 2 && name !== lastDetectedName) {
+            updateDetectedName(name);
+          }
+        } else {
+          stableDetection = { name: "No item", count: 0 };
+          if (lastDetectedName !== "No item") {
+            updateDetectedName("No item");
+          }
+        }
+      } catch (error) {
+        detectionContext.clearRect(0, 0, detectionLayer.width, detectionLayer.height);
+        currentBestPrediction = null;
+        updateDetectedName("No item");
+      }
+
+      window.setTimeout(detectFrame, 260);
+    }
+
+    function startDetectionLoop() {
+      if (detectionLoopStarted) return;
+      detectionLoopStarted = true;
+      detectFrame();
+    }
+
+    function prepareAiDetector() {
+      if (detectorModel) {
+        startDetectionLoop();
+        return;
+      }
+
+      if (cameraFeed.readyState >= 1) {
+        loadAiDetector();
+        return;
+      }
+
+      cameraFeed.addEventListener("loadedmetadata", loadAiDetector, { once: true });
+    }
+
+    async function attachCameraStream(stream, useEnvironmentCamera) {
+      cameraFeed.srcObject = stream;
+      cameraStarted = true;
+      cameraFeed.classList.toggle("environment", useEnvironmentCamera);
+      viewfinder.classList.remove("camera-error");
+
+      try {
+        await cameraFeed.play();
+      } catch (error) {
+        // Some browsers start playback after metadata; detector prep below will still retry.
+      }
+
+      prepareAiDetector();
+    }
+
+    async function startCamera() {
+      if (cameraStarted) {
+        prepareAiDetector();
+        return;
+      }
+      const isLocalhost = ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname);
+      if (!window.isSecureContext && !isLocalhost) {
+        viewfinder.classList.add("camera-error");
+        cameraFallback.textContent = "Kamera phone perlukan HTTPS. Buka melalui link HTTPS untuk benarkan akses kamera.";
+        return;
+      }
+
+      if (!navigator.mediaDevices?.getUserMedia) {
+        viewfinder.classList.add("camera-error");
+        cameraFallback.textContent = "Kamera tidak disokong di browser ini";
+        return;
+      }
+
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: {
+            facingMode: { ideal: "environment" },
+            width: { ideal: 1280 },
+            height: { ideal: 1920 }
+          }
+        });
+        await attachCameraStream(stream, true);
+      } catch (error) {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({
+            audio: false,
+            video: true
+          });
+          await attachCameraStream(stream, false);
+        } catch (fallbackError) {
+          cameraStarted = false;
+          viewfinder.classList.add("camera-error");
+          cameraFallback.textContent = "Benarkan akses kamera untuk scan item";
+        }
+      }
+    }
+
+    document.querySelectorAll(".bag-tab").forEach(tab => {
+      tab.addEventListener("click", () => {
+        document.querySelectorAll(".bag-tab").forEach(item => item.classList.remove("active"));
+        tab.classList.add("active");
+        selectedBag = tab.dataset.bag;
+        setToast(currentName, selectedBag);
+      });
+    });
+
+    function selectBagTab(tab) {
+      document.querySelectorAll(".bag-tab").forEach(item => item.classList.remove("active"));
+      tab.classList.add("active");
+      selectedBag = tab.dataset.bag;
+      setToast(currentName, selectedBag);
+    }
+
+    function createBagTab(label) {
+      if (!bagNames.includes(label)) {
+        bagNames.push(label);
+      }
+      const tab = document.createElement("button");
+      tab.className = "bag-tab";
+      tab.type = "button";
+      tab.dataset.bag = label;
+      tab.textContent = titleCaseBag(label);
+      document.querySelector(".bag-tabs").insertBefore(tab, document.getElementById("addBag"));
+      tab.addEventListener("click", () => selectBagTab(tab));
+      selectBagTab(tab);
+      manageActiveBag = label;
+      renderManage();
+    }
+
+    document.getElementById("addBag").addEventListener("click", () => {
+      bagInput.value = "";
+      bagSheet.classList.add("open");
+      bagInput.focus();
+    });
+
+    document.getElementById("cancelBag").addEventListener("click", () => {
+      bagSheet.classList.remove("open");
+    });
+
+    bagSheet.addEventListener("click", event => {
+      if (event.target === bagSheet) {
+        bagSheet.classList.remove("open");
+      }
+    });
+
+    bagForm.addEventListener("submit", event => {
+      event.preventDefault();
+      const label = bagInput.value.trim();
+      if (!label) return;
+      createBagTab(label);
+      bagSheet.classList.remove("open");
+    });
+
+    reminderBell.addEventListener("click", () => {
+      if (reminderConfig) {
+        reminderManageSheet.classList.add("open");
+        return;
+      }
+      setDefaultReminderDateTime();
+      reminderSheet.classList.add("open");
+    });
+
+    document.getElementById("cancelReminder").addEventListener("click", () => {
+      reminderSheet.classList.remove("open");
+    });
+
+    reminderSheet.addEventListener("click", event => {
+      if (event.target === reminderSheet) {
+        reminderSheet.classList.remove("open");
+      }
+    });
+
+    reminderManageSheet.addEventListener("click", event => {
+      if (event.target === reminderManageSheet) {
+        reminderManageSheet.classList.remove("open");
+      }
+    });
+
+    disableReminder.addEventListener("click", () => {
+      deactivateReminder();
+      reminderManageSheet.classList.remove("open");
+    });
+
+    resetReminder.addEventListener("click", () => {
+      reminderManageSheet.classList.remove("open");
+      setDefaultReminderDateTime();
+      reminderSheet.classList.add("open");
+    });
+
+    reminderForm.addEventListener("submit", async event => {
+      event.preventDefault();
+      const target = new Date(`${reminderDate.value}T${reminderTime.value || "00:00"}`);
+      if (Number.isNaN(target.getTime())) return;
+
+      if ("Notification" in window && Notification.permission === "default") {
+        Notification.requestPermission().catch(() => {});
+      }
+
+      reminderLocation.value = "Mengesan lokasi...";
+      const position = await getCurrentPosition();
+      reminderLocation.value = position ? "Lokasi semasa disimpan" : "Lokasi tidak tersedia";
+      activateReminder({
+        target,
+        position,
+        label: reminderLocation.value
+      });
+      reminderSheet.classList.remove("open");
+    });
+
+    reminderCheck.addEventListener("click", () => {
+      reminderBanner.classList.remove("visible");
+      showManageScreen();
+    });
+
+    manageNav.addEventListener("click", event => {
+      event.preventDefault();
+      showManageScreen();
+    });
+
+    checklistNav.addEventListener("click", event => {
+      event.preventDefault();
+      showChecklistScreen();
+    });
+
+    historyNav.addEventListener("click", event => {
+      event.preventDefault();
+      showHistoryScreen();
+    });
+
+    aboutNav.addEventListener("click", event => {
+      event.preventDefault();
+      aboutSlideIndex = 0;
+      showAboutScreen();
+    });
+
+    aboutNext.addEventListener("click", () => {
+      if (aboutSlideIndex >= aboutSlides.length - 1) {
+        markOnboardingSeen();
+        showHomeScreen();
+        return;
+      }
+      aboutSlideIndex += 1;
+      renderAboutSlide();
+    });
+
+    aboutSkip.addEventListener("click", () => {
+      markOnboardingSeen();
+      showHomeScreen();
+    });
+
+    homeStart.addEventListener("click", () => {
+      showScanScreen();
+    });
+
+    languageToggle.addEventListener("click", () => {
+      homeLanguage = homeLanguage === "EN" ? "MY" : "EN";
+      renderHome();
+    });
+
+    manageTabs.addEventListener("click", event => {
+      if (event.target.closest(".manage-add-tab")) {
+        bagInput.value = "";
+        bagSheet.classList.add("open");
+        bagInput.focus();
+        return;
+      }
+
+      const tab = event.target.closest(".manage-tab");
+      if (!tab) return;
+      manageActiveBag = tab.dataset.bag;
+      renderManage();
+      manageScreen.scrollTo({ top: 0, behavior: "smooth" });
+    });
+
+    manageContent.addEventListener("click", event => {
+      const deleteButton = event.target.closest(".delete-item");
+      if (!deleteButton) return;
+      const id = Number(deleteButton.dataset.id);
+      const index = recentItems.findIndex(item => item.id === id);
+      if (index >= 0) {
+        checkedItems.delete(id);
+        recentItems.splice(index, 1);
+        renderRecent();
+        renderManage();
+        renderChecklist();
+      }
+    });
+
+    checklistContent.addEventListener("change", event => {
+      const checkbox = event.target.closest('input[type="checkbox"][data-id]');
+      if (!checkbox) return;
+      const id = Number(checkbox.dataset.id);
+      if (checkbox.checked) {
+        checkedItems.add(id);
+      } else {
+        checkedItems.delete(id);
+      }
+      updateChecklistProgress();
+    });
+
+    confirmCheckoutButton.addEventListener("click", handleConfirmCheckout);
+
+    reviewChecklist.addEventListener("click", () => {
+      window.clearTimeout(checkoutWarningTimer);
+      checkoutWarningSheet.classList.remove("open");
+      showChecklistScreen();
+    });
+
+    checkoutWarningSheet.addEventListener("click", event => {
+      if (event.target === checkoutWarningSheet) {
+        window.clearTimeout(checkoutWarningTimer);
+        checkoutWarningSheet.classList.remove("open");
+      }
+    });
+
+    manageContent.addEventListener("pointerdown", event => {
+      const thumb = event.target.closest(".manage-item .item-dot");
+      if (!thumb) return;
+      const row = thumb.closest(".manage-item");
+      const id = Number(row.dataset.id);
+      const item = recentItems.find(entry => entry.id === id);
+      if (!item) return;
+
+      event.preventDefault();
+      dragState = {
+        id,
+        row,
+        active: false,
+        timer: window.setTimeout(() => startManageDrag(row, item, event), 1000)
+      };
+      row.setPointerCapture?.(event.pointerId);
+    });
+
+    manageContent.addEventListener("pointermove", event => {
+      if (!dragState) return;
+      if (!dragState.active) return;
+      moveDragGhost(event.clientX, event.clientY);
+      markDropTarget(getDropBagFromPoint(event.clientX, event.clientY));
+    });
+
+    manageContent.addEventListener("pointerup", endManageDrag);
+    manageContent.addEventListener("pointercancel", endManageDrag);
+
+    viewfinder.addEventListener("pointerdown", event => {
+      if (event.target.closest("button")) return;
+      syncDetectionCanvas();
+      const rect = viewfinder.getBoundingClientRect();
+      const ratio = window.devicePixelRatio || 1;
+      const canvasPoint = {
+        x: (event.clientX - rect.left) * ratio,
+        y: (event.clientY - rect.top) * ratio
+      };
+      focusPoint = mapCanvasPointToVideo(canvasPoint);
+      focusAssistUntil = Date.now() + 4500;
+      detectionVotes = [];
+      stableDetection = { name: "No item", count: 0 };
+      updateDetectedName("Scanning...");
+      const focusedCandidate = detectShapeFallback([]);
+      const validFocusedCandidate = focusedCandidate && formatDetectedName(focusedCandidate.class) !== "No item" ? focusedCandidate : null;
+      currentBestPrediction = validFocusedCandidate || currentBestPrediction;
+      drawDetection(currentBestPrediction);
+      if (validFocusedCandidate) {
+        updateDetectedName(formatDetectedName(validFocusedCandidate.class));
+      }
+    });
+
+    document.getElementById("cameraButton").addEventListener("click", () => {
+      if (app.classList.contains("manage-mode") || app.classList.contains("checklist-mode") || app.classList.contains("history-mode") || app.classList.contains("about-mode") || app.classList.contains("home-mode")) {
+        showScanScreen();
+      } else {
+        snapItem();
+      }
+    });
+
+    toast.addEventListener("click", () => {
+      openNameEditor();
+    });
+
+    document.getElementById("cancelEdit").addEventListener("click", () => {
+      editSheet.classList.remove("open");
+    });
+
+    editSheet.addEventListener("click", event => {
+      if (event.target === editSheet) {
+        editSheet.classList.remove("open");
+      }
+    });
+
+    editForm.addEventListener("submit", event => {
+      event.preventDefault();
+      const newName = nameInput.value.trim() || "Item Name";
+      currentName = newName;
+      if (recentItems.length) {
+        recentItems[0].name = newName;
+        if (recentItems[0].signature) {
+          currentSnapSignature = recentItems[0].signature;
+        }
+      }
+      recordTripItem(newName);
+      learnVisualItem(newName, currentSnapSignature);
+      renderRecent();
+      renderManage();
+      renderChecklist();
+      setToast(newName, selectedBag);
+      editSheet.classList.remove("open");
+    });
+
+    renderRecent();
+    renderManage();
+    renderChecklist();
+    renderHistory();
+    cleanOldVisualMemory();
+    updateDetectedName("No item");
+    toast.classList.remove("visible");
+    if (hasSeenOnboarding()) {
+      showHomeScreen();
+    } else {
+      aboutSlideIndex = 0;
+      showAboutScreen();
+    }
+  </script>
+</body>
+</html>
